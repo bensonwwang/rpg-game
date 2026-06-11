@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<title>Challenge RPG - 靈魂膨脹配點版 v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Noto+Sans+TC:wght@400;700&display=swap');
+
+:root {
+  --bg: #0c0c16;
+  --panel: #131324;
+  --panel2: #191932;
+  --accent: #ffd700;
+  --accent2: #ff4757;
+  --blue: #2f3542;
+  --blue-active: #5352ed;
+  --purple: #9d4edd;
+  --green: #2ed573;
+  --border: #252542;
+  --text: #eccc68;
+  --text-white: #ffffff;
+  --muted: #747d8c;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--bg);
+  color: var(--text-white);
+  min-height: 100vh;
+}
+
+#app { 
+  display: grid; 
+  grid-template-columns: 260px 1fr; 
+  grid-template-rows: auto 1fr; 
+  min-height: 100vh; 
+}
+#topbar { 
+  grid-column: 1/-1; 
+  background: #07070d; 
+  border-bottom: 2px solid var(--border); 
+  padding: 12px 20px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+#sidebar { background: var(--panel); border-right: 2px solid var(--border); padding: 14px; overflow-y: auto; }
+#main { background: var(--bg); overflow-y: auto; display: flex; flex-direction: column; }
+
+@media (max-width: 768px) {
+  #app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
+  #sidebar { border-right: none; border-bottom: 2px solid var(--border); padding: 10px; }
+  .zone-list { flex-direction: row !important; overflow-x: auto; padding-bottom: 5px; gap: 8px; }
+  .zone-card { flex-shrink: 0; min-width: 130px; margin-bottom: 0 !important; }
+  .sep, .section-title { display: none !important; }
+}
+
+.title-font { font-family: 'Cinzel', serif; color: var(--accent); font-weight: 700; }
+
+/* Tabs */
+.tabs { display: flex; border-bottom: 2px solid var(--border); background: var(--panel); overflow-x: auto; }
+.tab { padding: 12px 20px; cursor: pointer; font-size: 14px; color: var(--muted); border-bottom: 3px solid transparent; transition: .2s; flex-shrink: 0; font-weight: 700; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); background: rgba(255,215,0,0.05); }
+.tab-content { display: none; padding: 16px; flex-gap: 16px; }
+.tab-content.active { display: block; }
+
+/* Sub-tabs for Inventory */
+.sub-tabs { display: flex; gap: 6px; margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 6px; }
+.sub-tab { flex: 1; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; background: var(--panel); border-radius: 4px; color: var(--muted); border: 1px solid var(--border); }
+.sub-tab.active { background: var(--blue-active); color: var(--text-white); border-color: var(--blue-active); }
+
+/* Stats allocated displaying */
+.stat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.stat-chip { background: var(--panel2); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.stat-chip b { color: var(--accent); font-size: 14px; }
+
+/* Zone & Combat */
+.zone-list { display: flex; flex-direction: column; gap: 8px; }
+.zone-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; cursor: pointer; transition: .2s; }
+.zone-card.active { border-color: var(--accent); box-shadow: 0 0 8px rgba(255,215,0,0.2); }
+.zone-card.locked { opacity: .4; cursor: not-allowed; }
+
+.mob-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.mob-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; transition: .2s; position: relative; }
+.mob-card:hover { border-color: var(--blue-active); }
+.mob-card.is-boss { border-color: #ff4757; background: rgba(255,71,87,0.05); }
+
+/* Detailed Cards for Bags and Bestiary */
+.item-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; position: relative; }
+.item-card:hover { border-color: var(--accent); }
+.item-name { font-weight: 700; font-size: 13px; }
+.item-desc { font-size: 11px; color: var(--muted); min-height: 32px; }
+
+/* Rarity Color System */
+.r1 { border-left: 4px solid #747d8c; } 
+.r2 { border-left: 4px solid #5352ed; } 
+.r3 { border-left: 4px solid #9d4edd; } 
+.r4 { border-left: 4px solid #ffa502; box-shadow: inset 0 0 5px rgba(255,165,0,0.1); } 
+
+#combat-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.combatants { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin: 10px 0; }
+.combatant { background: var(--panel2); border-radius: 8px; padding: 10px; }
+.hp-bar { height: 8px; background: #252542; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.hp-fill { height: 100%; background: linear-gradient(90deg, #ff4757, #ffa502); width: 100%; transition: width 0.1s; }
+.hp-fill.enemy { background: linear-gradient(90deg, #2ed573, #1e90ff); }
+
+.combat-log { background: #07070d; border-radius: 6px; height: 130px; overflow-y: auto; padding: 10px; font-size: 12px; line-height: 1.6; }
+
+/* Buttons */
+.btn { background: var(--accent2); color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.btn:disabled { background: #2f3542; color: #747d8c; cursor: not-allowed; }
+.btn-gold { background: var(--accent); color: #111; }
+.btn-sm { padding: 4px 8px; font-size: 11px; }
+
+.sep { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+.section-title { font-size: 12px; color: var(--text); font-weight: bold; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <span class="title-font" style="font-size:18px;">⚔️ INFLATION: CHALLENGE</span>
+  <div id="topstats" class="stat-row"></div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="section-title">🗺️ 世界地圖分區</div>
+  <div class="zone-list" id="zone-list"></div>
+  <hr class="sep">
+  <button class="btn var(--accent2)" style="width:100%; background:#2f3542;" onclick="resetAll()">🗑️ 完全重置存檔</button>
+</div>
+
+<!-- MAIN CONTAINER -->
+<div id="main">
+  <div class="tabs">
+    <div class="tab active" data-tab="battle" onclick="switchTab('battle')">⚔️ 關卡突入</div>
+    <div class="tab" data-tab="shop" onclick="switchTab('shop')">🏪 靈魂商店</div>
+    <div class="tab" data-tab="equipment" id="tab-btn-eq" onclick="switchTab('equipment')">🎒 分類背包</div>
+    <div class="tab" data-tab="bestiary" onclick="switchTab('bestiary')">📖 掉落圖鑑</div>
+  </div>
+
+  <!-- BATTLE TAB -->
+  <div class="tab-content active" id="tab-battle">
+    <div id="combat-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div id="zone-label" style="font-weight:700; font-size:16px; color:var(--accent);"></div>
+          <div id="zone-desc" style="font-size:11px; color:var(--muted); margin-top:2px;"></div>
+        </div>
+        <div id="challenges-badge" style="background:rgba(255,71,87,0.2); color:var(--accent2); padding:4px 8px; border-radius:4px; font-size:12px; font-weight:bold;"></div>
+      </div>
+
+      <div class="combatants" id="combatants" style="display:none;">
+        <div class="combatant">
+          <div style="font-size:12px; display:flex; justify-content:between;"><span>🧙 勇者</span> <span id="php-val" style="float:right"></span></div>
+          <div class="hp-bar"><div class="hp-fill" id="php-bar"></div></div>
+        </div>
+        <div style="font-family:'Cinzel'; color:var(--accent2); font-weight:bold;">VS</div>
+        <div class="combatant">
+          <div style="font-size:12px; display:flex; justify-content:between;"><span id="enemy-name">魔物</span> <span id="ehp-val" style="float:right"></span></div>
+          <div class="hp-bar"><div class="hp-fill enemy" id="ehp-bar"></div></div>
+        </div>
+      </div>
+      <div class="combat-log" id="clog"></div>
+    </div>
+
+    <div class="section-title">👾 遭遇野怪名單 (點擊即刻開戰)</div>
+    <div class="mob-grid" id="mob-grid"></div>
+  </div>
+
+  <!-- SHOP TAB -->
+  <div class="tab-content" id="tab-shop">
+    <div class="section-title">🏪 靈魂交易所 (不可重複購買相同唯一裝備)</div>
+    <div class="mob-grid" id="shop-grid"></div>
+  </div>
+
+  <!-- EQUIPMENT TAB -->
+  <div class="tab-content" id="tab-equipment">
+    <div class="section-title">📊 靈魂點數投資 (極致膨脹：每點 ATK 帶來爆發性乘算基底)</div>
+    <div id="stat-alloc-panel"></div>
+    
+    <div class="section-title">📦 當前穿戴靈魂武裝</div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px; margin-bottom:15px;">
+      <div style="background:var(--panel); padding:10px; border-radius:8px; border:1px solid var(--border);">
+        <span style="color:var(--muted); font-size:11px;">⚔️ 武器部位</span>
+        <div id="eq-weapon" style="margin-top:5px; font-weight:bold;">空</div>
+      </div>
+      <div style="background:var(--panel); padding:10px; border-radius:8px; border:1px solid var(--border);">
+        <span style="color:var(--muted); font-size:11px;">🛡️ 防具部位</span>
+        <div id="eq-armor" style="margin-top:5px; font-weight:bold;">空</div>
+      </div>
+      <div style="background:var(--panel); padding:10px; border-radius:8px; border:1px solid var(--border);">
+        <span style="color:var(--muted); font-size:11px;">💍 飾品部位</span>
+        <div id="eq-acc" style="margin-top:5px; font-weight:bold;">空</div>
+      </div>
+    </div>
+
+    <div class="section-title">🎒 儲藏倉庫 (不限制格子，但相同裝備不堆疊獨立存放) <span id="inv-count" style="margin-left:8px; font-weight:normal; color:var(--muted);"></span></div>
+    <div class="sub-tabs">
+      <div class="sub-tab active" id="subtab-all" onclick="setBagTab('all')">全部</div>
+      <div class="sub-tab" id="subtab-weapon" onclick="setBagTab('weapon')">⚔️ 武器</div>
+      <div class="sub-tab" id="subtab-armor" onclick="setBagTab('armor')">🛡️ 防具</div>
+      <div class="sub-tab" id="subtab-acc" onclick="setBagTab('acc')">💍 飾品</div>
+    </div>
+    <div class="mob-grid" id="inventory-grid"></div>
+    
+    <hr class="sep">
+    <div class="section-title">📊 當前詳細面板公式細節</div>
+    <div id="stats-detail" style="background:var(--panel); padding:12px; border-radius:8px; font-size:12px; line-height:1.8; color:var(--muted);"></div>
+  </div>
+
+  <!-- BESTIARY TAB -->
+  <div class="tab-content" id="tab-bestiary">
+    <div class="section-title">📖 魔物生態與核心掉落寶物圖鑑 (擊殺後解鎖明細)</div>
+    <div class="mob-grid" id="bestiary-grid"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  DATA & STRUCTS (極精密調優之配點與怪獸膨脹數據)
+// ═══════════════════════════════════════════════
+const ZONES = [
+  {
+    id:0, name:"落葉原野", icon:"🌿", desc:"等級膨脹起點。建議配置基礎裝備，攻擊性價比極高！", color:"#2ed573",
+    mobs: [
+      { id:"slime", name:"狂暴史萊姆", icon:"🟢", hp:40, atk:8, def:2, xp:15, gold:25, drops:["生鏽鐵劍","破舊布衣"] },
+      { id:"field_bat", name:"偵查夜蝠", icon:"🦇", hp:80, atk:18, def:4, xp:35, gold:45, drops:["厚皮背心","殘破草帽"] },
+      { id:"goblin", name:"蠻荒哥布林", icon:"👺", hp:220, atk:45, def:10, xp:90, gold:110, drops:["短鐵劍","學徒銅戒"] },
+      { id:"wolf", name:"噬血孤狼", icon:"🐺", hp:680, atk:110, def:25, xp:280, gold:320, drops:["平衡訓練刃","幸運草手環"] },
+      { id:"grassboss", name:"草原大領主", icon:"👑", hp:3500, atk:420, def:80, xp:2500, gold:2500, drops:["領主碎岩大劍","利刃墜飾"], isBoss:true },
+    ]
+  },
+  {
+    id:1, name:"迷霧黑森林", icon:"🌲", desc:"魔物數值開始飆升。防禦與生命投資若不足將被瞬間秒殺。", color:"#1e90ff",
+    mobs: [
+      { id:"spider", name:"巨毒奪命蛛", icon:"🕷️", hp:8500, atk:850, def:210, xp:6800, gold:5500, drops:["重型破壞劍","皮上衣"] },
+      { id:"snake", name:"幻影毒蛇", icon:"🐍", hp:19000, atk:1650, def:380, xp:14000, gold:9800, drops:["流浪者輕甲","殘心符"] },
+      { id:"dark_elf", name:"影襲暗精靈", icon:"🧝", hp:48000, atk:3400, def:720, xp:35000, gold:22000, drops:["鋼鐵長劍","吸血鬼之牙"] },
+      { id:"treeant", name:"遠古巨樹人", icon:"🌳", hp:125000, atk:5200, def:1800, xp:85000, gold:48000, drops:["騎士重鎧","精靈不滅之心"] },
+      { id:"forestboss", name:"黑森林支配者", icon:"💚", hp:850000, atk:14500, def:4500, xp:650000, gold:350000, drops:["精靈不滅之心","火神璽印"], isBoss:true },
+    ]
+  },
+  {
+    id:2, name:"炙熱熔岩窟", icon:"🌋", desc:"極高防禦與超大血量障壁。需要極致ATK配點或傳說武器硬撼。", color:"#ff4757",
+    mobs: [
+      { id:"magma_golem", name:"不朽岩漿魔像", icon:"🔥", hp:3200000, atk:48000, def:19000, xp:2800000, gold:1200000, drops:["熔岩破壞斧"] },
+      { id:"fire_slime", name:"烈焰熔融怪", icon:"🟠", hp:6800000, atk:82000, def:28000, xp:5500000, gold:2500000, drops:["熔岩重型鎧"] },
+      { id:"lava_lizard", name:"黑曜石巨蜥", icon:"🦎", hp:15000000, atk:145000, def:48000, xp:12000000, gold:5500000, drops:["貪婪黃金袋"] },
+      { id:"dragboss", name:"滅世炎龍王", icon:"🐉", hp:98000000, atk:680000, def:120000, xp:85000000, gold:45000000, drops:["劫火炎龍之牙","火神璽印"], isBoss:true },
+    ]
+  },
+  {
+    id:3, name:"諸神黃昏神殿", icon:"⛩️", desc:"終焉與神域。體驗數值突破天際的終極膨脹世界。", color:"#ffa502",
+    mobs: [
+      { id:"angel", name:"墮落秩序天使", icon:"👼", hp:450000000, atk:3200000, def:850000, xp:380000000, gold:120000000, drops:["滅世裁決"] },
+      { id:"valkyrie", name:"神殿不敗武神", icon:"🛡️", hp:1200000000, atk:7800000, def:1900000, xp:950000000, gold:350000000, drops:["諸神天衣"] },
+      { id:"seraphin", name:"熾天使・終焉", icon:"✨", hp:4500000000, atk:18500000, def:4500000, xp:2800000000, gold:950000000, drops:["命運命輪"] },
+      { id:"godboss", name:"創世審判之神", icon:"⚡", hp:35000000000, atk:88000000, def:18000000, xp:25000000000, gold:8000000000, drops:["創世神之權杖","命運命輪"], isBoss:true },
+    ]
+  },
+];
+
+const ITEM_DB = {
+  "生鏽鐵劍":     { slot:"weapon", atkPct: 0.25, rarity:1, desc: "⚔️ 攻擊力放大 +25%" },
+  "短鐵劍":       { slot:"weapon", atkPct: 0.60, rarity:1, desc: "⚔️ 攻擊力放大 +60%" },
+  "平衡訓練刃":   { slot:"weapon", atkPct: 0.50, defPct: 0.30, rarity:2, desc: "⚖️ 攻擊 +50% / 防禦 +30%" },
+  "重型破壞劍":   { slot:"weapon", atkPct: 1.50, defPct: -0.20, rarity:2, desc: "💥 攻擊激增 +150% | 防禦驟降 -20%" },
+  "鋼鐵長劍":     { slot:"weapon", atkPct: 2.50, rarity:2, desc: "⚔️ 攻擊力大振幅 +250%" },
+  "領主碎岩大劍": { slot:"weapon", atkPct: 6.00, hpPct: 0.50, rarity:3, desc: "⛰️ 攻擊爆發 +600% / 生命加成 +50%" },
+  "熔岩破壞斧":   { slot:"weapon", atkPct: 25.0, rarity:3, desc: "🔥 狂暴熔岩之力：攻擊乘算狂飆 +2500%" },
+  "劫火炎龍之牙": { slot:"weapon", atkPct: 80.0, lifesteal: 0.15, rarity:4, desc: "🐉 巨龍核心：攻擊 +8000% 且自帶 15% 靈魂吸血" },
+  "滅世裁決":     { slot:"weapon", atkPct: 400.0, rarity:3, desc: "✨ 神罰之威：攻擊狂霸倍增 +40000%" },
+  "創世神之權杖": { slot:"weapon", atkPct: 2500.0, lifesteal: 0.25, hpPct: 10.0, rarity:4, desc: "⚡ 創世法則：攻擊 +250000% / 吸血 25% / 生命 +1000%" },
+
+  "破舊布衣":     { slot:"armor",  defPct: 0.20, hpPct: 0.30, rarity:1, desc: "🛡️ 防禦 +20% / 生命 +30%" },
+  "厚皮背心":     { slot:"armor",  defPct: 0.40, hpPct: 0.15, rarity:1, desc: "🛡️ 防禦 +40% / 生命 +15%" },
+  "皮上衣":       { slot:"armor",  defPct: 0.80, hpPct: 0.50, rarity:2, desc: "🛡️ 防禦 +80% / 生命 +50%" },
+  "流浪者輕甲":   { slot:"armor",  hpPct: 2.00, rarity:2, desc: "❤️ 放棄防禦：基礎生命值極致拓寬 +200%" },
+  "騎士重鎧":     { slot:"armor",  defPct: 3.00, hpPct: 2.00, rarity:3, desc: "🛡️ 皇家鐵壁：防禦 +300% / 生命 +200%" },
+  "熔岩重型鎧":   { slot:"armor",  defPct: 15.0, hpPct: 10.0, rarity:3, desc: "🌋 地殼之護：防禦 +1500% / 生命 +1000%" },
+  "諸神天衣":     { slot:"armor",  defPct: 250.0, hpPct: 150.0, rarity:4, desc: "✨ 神域天衣：防禦 +25000% / 生命 +15000%" },
+  
+  "殘破草帽":     { slot:"acc",    hpPct: 0.20, rarity:1, desc: "👒 生命加成 +20%" },
+  "學徒銅戒":     { slot:"acc",    atkPct: 0.15, defPct: 0.10, rarity:1, desc: "💍 攻擊 +15% / 防禦 +10%" },
+  "幸運草手環":   { slot:"acc",    dropRate: 0.10, rarity:1, desc: "🍀 氣運：全隊額外增幅 10% 掉寶率" },
+  "殘心符":       { slot:"acc",    dropRate: 0.25, rarity:2, desc: "🍀 宿命：全隊額外增幅 25% 掉寶率" },
+  "利刃墜飾":     { slot:"acc",    atkPct: 1.00, rarity:2, desc: "🔺 鋒芒：純粹額外增幅 100% 總攻擊" },
+  "吸血鬼之牙":   { slot:"acc",    lifesteal: 0.20, rarity:2, desc: "🩸 殺戮嗜血：對敵方造成傷害的 20% 轉化為自身生命" },
+  "貪婪黃金袋":   { slot:"acc",    goldBonus: 1.50, rarity:3, desc: "💰 貪婪橫財：戰鬥結算金幣狂翻 +150%" },
+  "精靈不滅之心": { slot:"acc",    lifesteal: 0.15, hpPct: 5.00, rarity:3, desc: "🌲 精靈源泉：15%吸血 / 總體生命上限 +500%" },
+  "火神璽印":     { slot:"acc",    atkPct: 10.0, defPct: 10.0, rarity:3, desc: "🔥 火神權能：攻擊 +1000% / 防禦 +1000%" },
+  "命運命輪":     { slot:"acc",    dropRate: 0.60, atkPct: 50.0, rarity:4, desc: "🌌 終極因果：掉寶率 +60% / 全局攻擊狂飆 +5000%" },
+};
+
+const SHOP_ITEMS = [
+  { name: "生鏽鐵劍",     price: 60 },
+  { name: "破舊布衣",     price: 50 },
+  { name: "厚皮背心",     price: 120 },
+  { name: "殘破草帽",     price: 40 },
+  { name: "幸運草手環",   price: 250 },
+  { name: "短鐵劍",       price: 600 },
+  { name: "平衡訓練刃",   price: 1500 },
+  { name: "皮上衣",       price: 2200 },
+  { name: "流浪者輕甲",   price: 4500 },
+  { name: "殘心符",       price: 8000 },
+  { name: "利刃墜飾",     price: 15000 },
+  { name: "吸血鬼之牙",   price: 35000 },
+];
+
+const XP_TABLE = Array.from({length:100}, (_,i) => Math.floor(60 * Math.pow(1.28, i)));
+
+let player = {
+  baseHp: 120, baseAtk: 15, baseDef: 5, hp: 120, level: 1, xp: 0, gold: 0,
+  challenges: 30, maxChallenges: 30, equipment: { weapon: null, armor: null, acc: null },
+  inventory: [], unlockedZone: 0, discovered: {}, defeatedBosses: {}, statPoints: 0,
+  statsAlloc: { hp: 0, atk: 0, def: 0, luk: 0 }
+};
+
+let selectedZone = 0;
+let fightRunning = false;
+let currentBagTab = "all";
+
+function load() {
+  try {
+    const s = localStorage.getItem("mcrpg_inflation_v3");
+    if (s) {
+      const parsed = JSON.parse(s);
+      if(parsed.inventory && Array.isArray(parsed.inventory)) {
+        Object.assign(player, parsed);
+      }
+    }
+    if (!player.defeatedBosses) player.defeatedBosses = {};
+    if (!player.discovered) player.discovered = {};
+    if (!player.statsAlloc) player.statsAlloc = { hp: 0, atk: 0, def: 0, luk: 0 };
+    player.hp = getStats().hp;
+  } catch(e) {}
+}
+
+function save() { try { localStorage.setItem("mcrpg_inflation_v3", JSON.stringify(player)); } catch(e){} }
+
+// ═══════════════════════════════════════════════
+//  配點公式極致優化 (Inflation 核心：基礎配點與乘算增幅公式打磨)
+// ═══════════════════════════════════════════════
+function getStats() {
+  let rawHp = player.baseHp + (player.level - 1) * 35 + (player.statsAlloc.hp * 120);
+  let rawAtk = player.baseAtk + (player.level - 1) * 6 + (player.statsAlloc.atk * 30);
+  let rawDef = player.baseDef + (player.level - 1) * 3 + (player.statsAlloc.def * 12);
+  let rawLukBonus = player.statsAlloc.luk * 0.015;
+
+  let hpPct = 0, atkPct = 0, defPct = 0, lifesteal = 0, dropRate = 0, goldBonus = 0;
+  for (const slot of ["weapon","armor","acc"]) {
+    const name = player.equipment[slot];
+    if (name && ITEM_DB[name]) {
+      const it = ITEM_DB[name];
+      hpPct  += it.hpPct  || 0;
+      atkPct += it.atkPct || 0;
+      defPct += it.defPct || 0;
+      lifesteal += it.lifesteal || 0;
+      dropRate += it.dropRate || 0;
+      goldBonus += it.goldBonus || 0;
+    }
+  }
+
+  return {
+    hp: Math.floor(rawHp * (1 + hpPct)),
+    atk: Math.floor(rawAtk * (1 + atkPct)),
+    def: Math.floor(rawDef * (1 + defPct)),
+    lifesteal: lifesteal,
+    dropRate: dropRate + rawLukBonus,
+    goldBonus: goldBonus + rawLukBonus,
+    rawHp, rawAtk, rawDef, hpPct, atkPct, defPct
+  };
+}
+
+function xpForNext() { return XP_TABLE[Math.min(player.level-1, XP_TABLE.length-1)]; }
+
+function gainXP(amount) {
+  player.xp += amount;
+  let leveled = false;
+  while (player.xp >= xpForNext() && player.level < 99) {
+    player.xp -= xpForNext();
+    player.level++;
+    player.statPoints += 10;
+    leveled = true;
+  }
+  return leveled;
+}
+
+function checkAndTriggerRebirth() {
+  if (player.challenges <= 0) {
+    player.level = 1;
+    player.xp = 0;
+    player.challenges = player.maxChallenges;
+    player.statPoints = 0;
+    player.statsAlloc = { hp: 0, atk: 0, def: 0, luk: 0 };
+    player.defeatedBosses = {};
+    player.hp = getStats().hp;
+    save();
+    render();
+    alert("🎯 靈魂壽命已盡！法陣強制轉生！\n\n【轉生代價與繼承】\n★ 當前等級與屬性點歸零，魔王全數復活！\n★ 金幣與倉庫中所有的「未疊加裝備」完美繼承！");
+    switchTab('equipment');
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════
+//  戰鬥系統 (精密模擬 Inflation 瞬息萬變的高壓快節奏戰鬥)
+// ═══════════════════════════════════════════════
+async function fightMob(mob) {
+  if (fightRunning) return;
+  if (mob.isBoss && player.defeatedBosses[mob.id]) {
+    addLog(`❌ 【${mob.name}】已被此世抹殺，需等下次轉生復活！`, "log-lose");
+    return;
+  }
+  if (player.challenges <= 0) { checkAndTriggerRebirth(); return; }
+
+  fightRunning = true;
+  switchTab('battle');
+  const stats = getStats();
+  let myHp = stats.hp, enHp = mob.hp, myMaxHp = stats.hp, enMaxHp = mob.hp;
+
+  document.getElementById("combatants").style.display = "grid";
+  document.getElementById("enemy-name").textContent = mob.icon + " " + mob.name;
+  updateHPBars(myHp, myMaxHp, enHp, enMaxHp);
+  clearLog();
+  addLog(`⚔️ 迎戰魔物：<b>${mob.name}</b>`, "");
+
+  let round = 0, won = false;
+  while (myHp > 0 && enHp > 0) {
+    round++;
+    await sleep(40);
+    const pDmg = Math.max(1, stats.atk - mob.def);
+    enHp = Math.max(0, enHp - pDmg);
+    let healText = "";
+    if (stats.lifesteal > 0) {
+      const healAmount = Math.floor(pDmg * stats.lifesteal);
+      if (healAmount > 0) {
+        myHp = Math.min(myMaxHp, myHp + healAmount);
+        healText = ` (🩸吸血 +${healAmount.toLocaleString()})`;
+      }
+    }
+    addLog(`<span class="log-hit">🗡️ 你施展重擊，造成 ${pDmg.toLocaleString()} 傷害${healText}</span>`);
+    updateHPBars(myHp, myMaxHp, enHp, enMaxHp);
+    if (enHp <= 0) { won = true; break; }
+
+    await sleep(30);
+    const eDmg = Math.max(1, mob.atk - stats.def);
+    myHp = Math.max(0, myHp - eDmg);
+    addLog(`<span class="log-mob">💥 魔物咆哮反撲，你遭受 ${eDmg.toLocaleString()} 點重創</span>`);
+    updateHPBars(myHp, myMaxHp, enHp, enMaxHp);
+    if (myHp <= 0) break;
+    if (round > 50) break;
+  }
+
+  player.challenges--;
+  await sleep(100);
+
+  if (won) {
+    const finalGold = Math.floor(mob.gold * (1 + stats.goldBonus));
+    player.gold += finalGold;
+    player.discovered[mob.id] = true;
+    addLog(`<span class="log-win">✅ 斬殺成功！斬獲經驗 ${mob.xp.toLocaleString()} 與 💰 金幣 ${finalGold.toLocaleString()}！</span>`);
+    
+    if (gainXP(mob.xp)) {
+      addLog(`<span class="log-level">⚡ 靈魂境界突破！獲得大量點數，請前往背包配點！</span>`);
+    }
+
+    const finalDropChance = (mob.isBoss ? 0.35 : 0.08) + stats.dropRate;
+    if (Math.random() < finalDropChance) {
+      const dropName = mob.drops[Math.floor(Math.random() * mob.drops.length)];
+      player.inventory.push(dropName);
+      addLog(`<span class="log-drop">💎 神兵掉落！獲得專屬靈魂武裝：【${dropName}】(已存入倉庫)</span>`);
+    }
+
+    if (mob.isBoss) {
+      player.defeatedBosses[mob.id] = true;
+      if (player.unlockedZone <= selectedZone && selectedZone + 1 < ZONES.length) {
+        player.unlockedZone = selectedZone + 1;
+        addLog(`<span class="log-level">🔓 新境界星圖【${ZONES[selectedZone+1].name}】已被開拓解鎖！</span>`);
+      }
+    }
+  } else {
+    addLog(`<span class="log-lose">💀 軀殼被撕碎，此戰敗北。剩餘挑戰壽命：${player.challenges} 次</span>`);
+  }
+
+  player.hp = getStats().hp;
+  save();
+  fightRunning = false;
+  if (!checkAndTriggerRebirth()) render();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function updateHPBars(myHp, myMax, enHp, enMax) {
+  document.getElementById("php-val").textContent = `${myHp.toLocaleString()}/${myMax.toLocaleString()}`;
+  document.getElementById("ehp-val").textContent = `${enHp.toLocaleString()}/${enMax.toLocaleString()}`;
+  document.getElementById("php-bar").style.width = (myHp / myMax * 100) + "%";
+  document.getElementById("ehp-bar").style.width = (enHp / enMax * 100) + "%";
+}
+
+function allocateStat(type) {
+  if (player.statPoints <= 0) return;
+  let count = 1;
+  if (player.statPoints >= 10) count = 10;
+  if (player.statPoints >= 50) count = 50;
+  
+  player.statPoints -= count;
+  player.statsAlloc[type] += count;
+  player.hp = getStats().hp;
+  save();
+  render();
+}
+
+function addLog(msg) {
+  const el = document.getElementById("clog");
+  const d = document.createElement("div"); d.innerHTML = msg; el.insertBefore(d, el.firstChild);
+}
+function clearLog() { document.getElementById("clog").innerHTML = ""; }
+
+function switchTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  document.querySelectorAll(".tab-content").forEach(t => t.classList.toggle("active", t.id === "tab-"+name));
+  if (name === "shop") renderShop();
+  if (name === "equipment") renderEquipment();
+  if (name === "bestiary") renderBestiary();
+}
+
+function setBagTab(slotType) {
+  currentBagTab = slotType;
+  document.querySelectorAll(".sub-tab").forEach(st => st.classList.toggle("active", st.id === `subtab-${slotType}`));
+  renderEquipment();
+}
+
+function selectZone(zoneId) { selectedZone = zoneId; render(); }
+
+// ═══════════════════════════════════════════════
+//  背包與裝備系統
+// ═══════════════════════════════════════════════
+function equip(actualIndex) {
+  const name = player.inventory[actualIndex];
+  if (!ITEM_DB[name]) return;
+  const it = ITEM_DB[name];
+  const oldEquip = player.equipment[it.slot];
+  
+  player.equipment[it.slot] = name;
+  player.inventory.splice(actualIndex, 1);
+  
+  if (oldEquip) {
+    player.inventory.push(oldEquip);
+  }
+  save();
+  render();
+}
+
+function unequip(slot) {
+  const name = player.equipment[slot];
+  if (!name) return;
+  player.equipment[slot] = null;
+  player.inventory.push(name);
+  save();
+  render();
+}
+
+function buyItem(name, price) {
+  if (player.equipment.weapon === name || player.equipment.armor === name || player.equipment.acc === name || player.inventory.includes(name)) {
+    alert("你已經擁有此項獨一無二的靈魂武裝！");
+    return;
+  }
+  if (player.gold < price) { alert("金幣不夠！快去更高倍率的星圖地圖刷怪！"); return; }
+  player.gold -= price;
+  player.inventory.push(name);
+  save();
+  renderShop();
+  renderTopbar();
+}
+
+function resetAll() {
+  if (!confirm("確定要執行禁忌法陣？這會抹除所有轉生傳承數據！")) return;
+  localStorage.removeItem("mcrpg_inflation_v3");
+  location.reload();
+}
+
+function render() {
+  renderTopbar();
+  renderZones();
+  renderMobGrid();
+  renderEquipment();
+}
+
+function renderTopbar() {
+  const s = getStats();
+  document.getElementById("tab-btn-eq").innerHTML = `🎒 背包 ${player.statPoints > 0 ? `<b style="color:var(--accent2); font-size:11px;">(待配點:${player.statPoints})</b>` : ''}`;
+  document.getElementById("topstats").innerHTML = `
+    <div class="stat-chip">👤 境界: <b>Lv.${player.level}</b></div>
+    <div class="stat-chip">❤️ 生命: <b>${s.hp.toLocaleString()}</b></div>
+    <div class="stat-chip">⚔️ 攻擊: <b>${s.atk.toLocaleString()}</b></div>
+    <div class="stat-chip">💰 靈魂幣: <b style="color:#ffd700;">${player.gold.toLocaleString()}</b></div>
+    <div class="stat-chip">🎯 壽命剩餘: <b style="color:var(--accent2);">${player.challenges} 戰</b></div>
+  `;
+}
+
+function renderZones() {
+  const el = document.getElementById("zone-list"); el.innerHTML = "";
+  ZONES.forEach((z, i) => {
+    const locked = i > player.unlockedZone;
+    const div = document.createElement("div");
+    div.className = "zone-card" + (locked ? " locked" : "") + (selectedZone === i && !locked ? " active" : "");
+    div.style.marginBottom = "8px";
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-weight:bold; font-size:13px; color:${locked ? '#555' : z.color}">${z.icon} ${z.name}</span>
+        <span style="font-size:10px; color:var(--muted);">${z.id===3?'神域':('階級 '+ (z.id+1))}</span>
+      </div>
+    `;
+    if (!locked) div.onclick = () => selectZone(i);
+    el.appendChild(div);
+  });
+}
+
+function renderMobGrid() {
+  const z = ZONES[selectedZone], locked = selectedZone > player.unlockedZone;
+  document.getElementById("zone-label").textContent = z.icon + " " + z.name;
+  document.getElementById("zone-desc").textContent = z.desc;
+  document.getElementById("challenges-badge").textContent = `⏳ 本輪剩餘：${player.challenges} 戰`;
+
+  const grid = document.getElementById("mob-grid"); grid.innerHTML = "";
+  if (locked) return;
+
+  z.mobs.forEach(mob => {
+    const card = document.createElement("div");
+    if (mob.isBoss && player.defeatedBosses[mob.id]) {
+      card.className = "mob-card is-boss"; card.style.opacity = "0.3"; card.style.cursor = "not-allowed";
+      card.innerHTML = `<div style="text-align:center; font-size:12px; color:var(--muted); text-decoration:line-through;">👑 ${mob.name}<br>[已被徹底淨化]</div>`;
+    } else {
+      card.className = "mob-card" + (mob.isBoss ? " is-boss" : "");
+      card.innerHTML = `
+        <div style="display:flex; justify-content:between; font-weight:bold; font-size:13px; color:${mob.isBoss?'var(--accent2)':'var(--text-white)'}">
+          <span>${mob.icon} ${mob.name}</span> ${mob.isBoss?'<b style="color:var(--accent)">[BOSS]</b>':''}
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:11px; color:var(--muted); margin-top:6px;">
+          <div>❤️ 血量: ${mob.hp.toLocaleString()}</div>
+          <div>⚔️ 傷害: ${mob.atk.toLocaleString()}</div>
+        </div>
+        <div style="font-size:10px; color:#ffa502; border-top:1px dashed var(--border); margin-top:6px; padding-top:4px;">
+          🔍 概率尋寶：${mob.drops.join(', ')}
+        </div>
+      `;
+      card.onclick = () => fightMob(mob);
+    }
+    grid.appendChild(card);
+  });
+}
+
+function renderShop() {
+  const grid = document.getElementById("shop-grid"); grid.innerHTML = "";
+  SHOP_ITEMS.forEach(item => {
+    const it = ITEM_DB[item.name]; if (!it) return;
+    const isOwned = player.equipment.weapon === item.name || player.equipment.armor === item.name || player.equipment.acc === item.name || player.inventory.includes(item.name);
+    
+    const card = document.createElement("div"); card.className = `item-card r${it.rarity}`;
+    card.innerHTML = `
+      <div>
+        <div class="item-name" style="color:var(--text);">${item.name}</div>
+        <div class="item-desc" style="margin-top:4px;">${it.desc}</div>
+      </div>
+      <button class="btn btn-gold btn-sm" style="width:100%;" ${player.gold < item.price || isOwned ? 'disabled' : ''} onclick="buyItem('${item.name}', ${item.price})">
+        ${isOwned ? '已永久持有' : '💰 ' + item.price.toLocaleString()}
+      </button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  背包與穿戴介面重製
+// ═══════════════════════════════════════════════
+function renderEquipment() {
+  const s = getStats();
+  
+  document.getElementById("stat-alloc-panel").innerHTML = `
+    <div style="background:var(--panel2); padding:12px; border-radius:8px; border:1px solid var(--border); margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <span style="font-size:13px; font-weight:bold;">✨ 未分配靈魂點數: <b style="color:var(--accent); font-size:16px;">${player.statPoints}</b></span>
+        <span style="font-size:11px; color:var(--muted);">點選加號配點 (高能自動配大點)</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:8px; font-size:12px;">
+        <div style="background:var(--panel); padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <span>❤️ 生命點數 (<b>${player.statsAlloc.hp}</b>)</span>
+          <button class="btn btn-gold btn-sm" ${player.statPoints<=0?'disabled':''} onclick="allocateStat('hp')">+</button>
+        </div>
+        <div style="background:var(--panel); padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <span>⚔️ 攻擊點數 (<b>${player.statsAlloc.atk}</b>)</span>
+          <button class="btn btn-gold btn-sm" ${player.statPoints<=0?'disabled':''} onclick="allocateStat('atk')">+</button>
+        </div>
+        <div style="background:var(--panel); padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <span>🛡️ 防禦點數 (<b>${player.statsAlloc.def}</b>)</span>
+          <button class="btn btn-gold btn-sm" ${player.statPoints<=0?'disabled':''} onclick="allocateStat('def')">+</button>
+        </div>
+        <div style="background:var(--panel); padding:6px 10px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+          <span>🍀 氣運幸運 (<b>${player.statsAlloc.luk}</b>)</span>
+          <button class="btn btn-gold btn-sm" ${player.statPoints<=0?'disabled':''} onclick="allocateStat('luk')">+</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  for (const slot of ["weapon","armor","acc"]) {
+    const name = player.equipment[slot];
+    const targetEl = document.getElementById("eq-"+slot);
+    if(name && ITEM_DB[name]) {
+      const it = ITEM_DB[name];
+      targetEl.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">
+          <div>
+            <div style="color:var(--text); font-size:12px;">${name}</div>
+            <div style="font-size:10px; color:var(--muted); font-weight:normal;">${it.desc}</div>
+          </div>
+          <button class="btn btn-sm" style="background:#4b4b75;" onclick="unequip('${slot}')">卸下</button>
+        </div>
+      `;
+    } else {
+      targetEl.innerHTML = `<span style="color:var(--muted); font-weight:normal; font-size:12px;">無靈魂裝備</span>`;
+    }
+  }
+
+  const grid = document.getElementById("inventory-grid"); grid.innerHTML = "";
+  let displayedCount = 0;
+
+  player.inventory.forEach((name, actualIndex) => {
+    const it = ITEM_DB[name];
+    if (!it) return;
+    
+    if (currentBagTab !== "all" && it.slot !== currentBagTab) return;
+    displayedCount++;
+
+    const card = document.createElement("div"); 
+    card.className = `item-card r${it.rarity}`;
+    card.innerHTML = `
+      <div>
+        <div class="item-name">${name}</div>
+        <div class="item-desc" style="margin-top:4px; font-weight:normal; line-height:1.4;">${it.desc}</div>
+        <div style="font-size:10px; color:var(--muted); margin-top:2px;">部位：${it.slot==='weapon'?'⚔️武器':(it.slot==='armor'?'🛡️防具':'💍飾品')}</div>
+      </div>
+      <button class="btn btn-sm btn-gold" style="width:100%;" onclick="equip(${actualIndex})">穿戴此靈魂武裝</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  const invCountEl = document.getElementById("inv-count");
+  if (invCountEl) {
+    invCountEl.textContent = `[ 本頁數量: ${displayedCount} / 總倉庫物件: ${player.inventory.length} ]`;
+  }
+
+  document.getElementById("stats-detail").innerHTML = `
+    <div>🏷️ <b>靈魂生命值總結：</b> 基礎成長與配點基底 [${s.rawHp.toLocaleString()}] × 靈魂裝備乘算加成 [強度 +${Math.round(s.hpPct*100)}%] = <b>${s.hp.toLocaleString()} HP</b></div>
+    <div>🏷️ <b>靈魂攻擊力總結：</b> 基礎成長與配點基底 [${s.rawAtk.toLocaleString()}] × 靈魂裝備乘算加成 [強度 +${Math.round(s.atkPct*100)}%] = <b>${s.atk.toLocaleString()} ATK</b></div>
+    <div>🏷️ <b>靈魂防禦力總結：</b> 基礎成長與配點基底 [${s.rawDef.toLocaleString()}] × 靈魂裝備乘算加成 [強度 +${Math.round(s.defPct*100)}%] = <b>${s.def.toLocaleString()} DEF</b></div>
+    <div style="border-top:1px dashed var(--border); margin-top:6px; padding-top:6px; display:grid; grid-template-columns:1fr 1fr;">
+      <div>🩸 特殊吸血轉換率: <b style="color:var(--accent2);">${Math.round(s.lifesteal*100)}%</b></div>
+      <div>🍀 全局尋寶幸運增幅: <b style="color:var(--green);">+${Math.round(s.dropRate*100)}%</b></div>
+      <div>💰 額外金幣加成乘數: <b style="color:#ffd700;">+${Math.round(s.goldBonus*100)}%</b></div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+//  圖鑑系統
+// ═══════════════════════════════════════════════
+function renderBestiary() {
+  const grid = document.getElementById("bestiary-grid"); grid.innerHTML = "";
+  ZONES.forEach(z => {
+    z.mobs.forEach(mob => {
+      const known = player.discovered[mob.id];
+      const card = document.createElement("div"); 
+      card.className = "bestiary-card";
+      card.style.background = "var(--panel)";
+      card.style.border = "1px solid " + (known ? "var(--border)" : "#222");
+      
+      if(known) {
+        card.innerHTML = `
+          <div style="font-weight:bold; font-size:13px; color:var(--text);">${mob.icon} ${mob.name}</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:4px;">
+            🩸 HP 基底: ${mob.hp.toLocaleString()}<br>
+            ⚔️ ATK 基底: ${mob.atk.toLocaleString()}
+          </div>
+          <div style="font-size:11px; color:var(--accent); border-top:1px dotted var(--border); margin-top:5px; padding-top:4px;">
+            🎁 核心掉落明細：<br>${mob.drops.map(d => `【${d}】`).join('<br>')}
+          </div>
+        `;
+      } else {
+        card.innerHTML = `
+          <div style="font-weight:bold; font-size:13px; color:#444; text-align:center; padding:15px 0;">
+            ❓ 未知魔物數據<br><span style="font-size:10px; font-weight:normal; color:#333;">(需於關卡中將其擊殺解鎖)</span>
+          </div>
+        `;
+        card.style.opacity = "0.4";
+      }
+      grid.appendChild(card);
+    });
+  });
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+load(); render();
+</script>
+</body>
+</html>
