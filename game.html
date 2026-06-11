@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>靈魂膨脹：無限轉生 v2.0</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #08080f;
+  --panel:     #0f0f1e;
+  --panel2:    #161628;
+  --panel3:    #1d1d38;
+  --border:    #2a2a50;
+  --border2:   #3a3a65;
+  --gold:      #f0c040;
+  --gold2:     #ffd870;
+  --red:       #ff3d5a;
+  --red2:      #ff6b80;
+  --green:     #00e676;
+  --green2:    #69f0ae;
+  --blue:      #448aff;
+  --blue2:     #82b1ff;
+  --purple:    #aa66ff;
+  --orange:    #ff9800;
+  --cyan:      #00e5ff;
+  --muted:     #5a5a80;
+  --text:      #dde0f5;
+  --text2:     #9090c0;
+  --accent:    #f0c040;
+  --crit:      #ff6b35;
+  --combo:     #00e5ff;
+  --lifesteal: #ff4d6d;
+}
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* ── LAYOUT ── */
+#wrap{display:grid;grid-template-columns:280px 1fr;grid-template-rows:auto 1fr;min-height:100vh;max-width:1400px;margin:0 auto;}
+#topbar{grid-column:1/-1;background:linear-gradient(90deg,#080812,#0f0f1e 30%,#0f0f1e 70%,#080812);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+#sidebar{background:var(--panel);border-right:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+#main{background:var(--bg);overflow-y:auto;display:flex;flex-direction:column;}
+
+@media(max-width:800px){
+  #wrap{grid-template-columns:1fr;grid-template-rows:auto auto 1fr;}
+  #sidebar{border-right:none;border-bottom:1px solid var(--border);padding:10px;}
+  .zone-list{flex-direction:row!important;overflow-x:auto;padding-bottom:4px;}
+  .zone-card{flex-shrink:0;min-width:120px;}
+}
+
+/* ── TOPBAR CHIPS ── */
+.chip{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+.chip b{font-size:13px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel);overflow-x:auto;flex-shrink:0;}
+.tab{padding:11px 18px;cursor:pointer;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;font-weight:700;letter-spacing:.5px;}
+.tab:hover{color:var(--text);}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(240,192,64,.05);}
+.tab-badge{background:var(--red);color:#fff;border-radius:10px;padding:1px 5px;font-size:10px;margin-left:3px;}
+.tab-content{display:none;padding:16px;flex-direction:column;gap:14px;flex:1;}
+.tab-content.active{display:flex;}
+
+/* ── ZONE CARDS ── */
+.zone-list{display:flex;flex-direction:column;gap:6px;}
+.zone-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;cursor:pointer;transition:.15s;}
+.zone-card:hover:not(.locked){border-color:var(--border2);background:var(--panel3);}
+.zone-card.active{border-color:var(--gold);box-shadow:0 0 10px rgba(240,192,64,.15);}
+.zone-card.locked{opacity:.35;cursor:not-allowed;}
+.zone-name{font-weight:700;font-size:13px;}
+.zone-lvreq{font-size:10px;color:var(--muted);}
+
+/* ── COMBAT PANEL ── */
+#combat-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;}
+.combat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.combatants{display:grid;grid-template-columns:1fr 56px 1fr;gap:10px;align-items:center;}
+.combatant{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;}
+.combatant-name{font-size:12px;font-weight:700;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.hp-bar{height:7px;background:#1a1a33;border-radius:4px;overflow:hidden;margin-bottom:3px;}
+.hp-fill{height:100%;background:linear-gradient(90deg,var(--red),var(--red2));transition:width .12s;}
+.hp-fill.enemy{background:linear-gradient(90deg,var(--green),var(--green2));}
+.hp-text{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.vs-badge{text-align:center;font-family:'Cinzel',serif;color:var(--red);font-weight:900;font-size:20px;text-shadow:0 0 15px rgba(255,61,90,.5);}
+
+/* ── COMBAT LOG ── */
+.clog{background:#06060e;border:1px solid var(--border);border-radius:8px;height:140px;overflow-y:auto;padding:10px;font-size:12px;line-height:1.65;font-family:'JetBrains Mono',monospace;}
+.clog::-webkit-scrollbar{width:4px;}
+.clog::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.log-hit{color:#a0c8ff;}
+.log-crit{color:var(--crit);font-weight:700;}
+.log-combo{color:var(--combo);font-weight:700;}
+.log-heal{color:var(--lifesteal);}
+.log-win{color:var(--green);font-weight:700;}
+.log-lose{color:var(--red);}
+.log-drop{color:var(--gold);}
+.log-level{color:var(--purple);}
+.log-mob{color:#c0a0ff;}
+.log-rebirth{color:var(--orange);font-weight:700;}
+.log-karma{color:var(--cyan);}
+
+/* ── FLOATING DAMAGE NUMBERS ── */
+#dmg-layer{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;}
+.dmg-float{position:absolute;font-family:'Cinzel',serif;font-weight:900;pointer-events:none;animation:floatUp 0.8s ease-out forwards;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}.
+
+/* ── MOB GRID ── */
+.mob-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.mob-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;transition:.15s;position:relative;}
+.mob-card:hover:not(.mob-dead){border-color:var(--border2);background:var(--panel3);transform:translateY(-1px);}
+.mob-card.is-boss{border-color:rgba(240,192,64,.3);background:linear-gradient(135deg,var(--panel2),rgba(240,192,64,.04));}
+.mob-card.mob-dead{opacity:.3;cursor:not-allowed;}
+.mob-title{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;margin-bottom:6px;}
+.mob-stats{display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:11px;color:var(--muted);}
+.mob-drops{font-size:10px;color:var(--gold2);margin-top:6px;border-top:1px dashed var(--border);padding-top:5px;}
+.boss-badge{background:rgba(240,192,64,.15);color:var(--gold);border:1px solid rgba(240,192,64,.4);border-radius:4px;font-size:10px;padding:1px 5px;font-weight:700;}
+
+/* ── ITEMS ── */
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.item-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;position:relative;transition:.15s;}
+.item-card:hover{border-color:var(--border2);}
+.item-name{font-weight:700;font-size:13px;}
+.item-desc{font-size:11px;color:var(--muted);line-height:1.5;flex:1;}
+.item-enhance{font-size:10px;color:var(--green);font-weight:700;}
+
+/* Rarity borders */
+.r1{border-left:3px solid var(--muted);}
+.r2{border-left:3px solid var(--blue);}
+.r3{border-left:3px solid var(--purple);}
+.r4{border-left:3px solid var(--gold);box-shadow:inset 0 0 6px rgba(240,192,64,.06);}
+.r5{border-left:3px solid var(--cyan);box-shadow:inset 0 0 10px rgba(0,229,255,.08);}
+
+/* ── EQUIP SLOTS ── */
+.equip-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px;}
+.equip-slot{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px;}
+.equip-label{font-size:11px;color:var(--muted);margin-bottom:6px;}
+.equip-content{font-size:12px;font-weight:700;}
+
+/* ── STAT ALLOC ── */
+.stat-alloc-box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px;}
+.stat-row-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin-top:8px;}
+.stat-row-item{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;}
+.stat-row-left{font-size:12px;}
+.stat-row-left span{color:var(--gold);font-weight:700;}
+.btn-row{display:flex;gap:3px;}
+
+/* ── KARMA PANEL ── */
+.karma-box{background:linear-gradient(135deg,var(--panel2),rgba(0,229,255,.04));border:1px solid rgba(0,229,255,.2);border-radius:10px;padding:12px;}
+.karma-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px;}
+.karma-item{background:var(--panel);border:1px solid rgba(0,229,255,.15);border-radius:6px;padding:9px;display:flex;flex-direction:column;gap:4px;}
+.karma-name{font-size:12px;font-weight:700;color:var(--cyan);}
+.karma-value{font-size:18px;font-weight:900;color:var(--gold);font-family:'JetBrains Mono',monospace;}
+.karma-desc{font-size:10px;color:var(--muted);}
+
+/* ── BESTIARY ── */
+.bestiary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.bestiary-card{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px;}
+
+/* ── PROGRESS BARS ── */
+.prog-bar-wrap{height:10px;background:#1a1a33;border-radius:5px;overflow:hidden;margin:4px 0;}
+.prog-bar-fill{height:100%;border-radius:5px;transition:width .3s;}
+.xp-fill{background:linear-gradient(90deg,var(--purple),#cc88ff);}
+.challenge-fill{background:linear-gradient(90deg,var(--red),var(--orange));}
+
+/* ── BUTTONS ── */
+.btn{border:none;padding:7px 13px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;transition:.15s;font-family:'Noto Sans TC',sans-serif;}
+.btn:disabled{background:#1e1e38;color:var(--muted);cursor:not-allowed;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover:not(:disabled){background:var(--red2);}
+.btn-gold{background:var(--gold);color:#111;}
+.btn-gold:hover:not(:disabled){background:var(--gold2);}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover:not(:disabled){background:var(--blue2);}
+.btn-dark{background:var(--panel3);color:var(--text2);border:1px solid var(--border);}
+.btn-dark:hover:not(:disabled){background:var(--panel2);color:var(--text);}
+.btn-sm{padding:4px 8px;font-size:11px;}
+.btn-xs{padding:2px 6px;font-size:10px;}
+
+/* ── MISC ── */
+.section-title{font-size:12px;color:var(--gold);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:8px 0 6px;display:flex;align-items:center;gap:6px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.sep{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.muted{color:var(--muted);}
+.text-gold{color:var(--gold);}
+.text-green{color:var(--green);}
+.text-red{color:var(--red);}
+.text-cyan{color:var(--cyan);}
+.text-purple{color:var(--purple);}
+.flash{animation:flash .3s ease-out;}
+@keyframes flash{0%{filter:brightness(3);}100%{filter:brightness(1);}}
+
+/* ── TITLE ── */
+.game-title{font-family:'Cinzel',serif;font-weight:900;font-size:16px;color:var(--gold);letter-spacing:2px;text-shadow:0 0 20px rgba(240,192,64,.4);}
+.sub-tabs{display:flex;gap:5px;margin-bottom:10px;}
+.sub-tab{flex:1;text-align:center;padding:6px;font-size:11px;cursor:pointer;background:var(--panel2);border-radius:4px;color:var(--muted);border:1px solid var(--border);transition:.15s;}
+.sub-tab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+.tooltip-box{background:var(--panel3);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text2);line-height:1.6;}
+.rebirth-counter{background:linear-gradient(90deg,rgba(255,152,0,.1),transparent);border:1px solid rgba(255,152,0,.3);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--orange);}
+.challenge-warning{color:var(--red);font-size:11px;font-weight:700;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+</style>
+</head>
+<body>
+<div id="dmg-layer"></div>
+<div id="wrap">
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="game-title">⚔ INFLATION∙REBIRTH</div>
+  <div class="chips" id="topstats"></div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="section-title">🌍 地圖</div>
+  <div class="zone-list" id="zone-list"></div>
+
+  <hr class="sep">
+  <div class="section-title">🔄 轉生</div>
+  <div id="rebirth-info"></div>
+  <div style="margin-top:6px;">
+    <div class="section-title" style="font-size:10px;">⏳ 剩餘挑戰次數</div>
+    <div id="challenges-display" style="font-size:22px;font-weight:900;font-family:'JetBrains Mono',monospace;color:var(--red);text-align:center;padding:4px 0;"></div>
+    <div class="prog-bar-wrap"><div class="prog-bar-fill challenge-fill" id="challenge-bar"></div></div>
+  </div>
+
+  <hr class="sep">
+  <div class="section-title" style="font-size:10px;">✨ 經驗值</div>
+  <div id="xp-display" style="font-size:11px;color:var(--muted);margin-bottom:3px;"></div>
+  <div class="prog-bar-wrap"><div class="prog-bar-fill xp-fill" id="xp-bar"></div></div>
+
+  <hr class="sep">
+  <button class="btn btn-dark btn-sm" style="width:100%;margin-top:4px;" onclick="resetAll()">🗑 完全重置</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="tabs">
+    <div class="tab active" data-tab="battle" onclick="switchTab('battle')">⚔️ 戰鬥</div>
+    <div class="tab" data-tab="equip" id="tab-equip-btn" onclick="switchTab('equip')">🎒 裝備</div>
+    <div class="tab" data-tab="shop" onclick="switchTab('shop')">🏪 商店</div>
+    <div class="tab" data-tab="karma" onclick="switchTab('karma')">🌀 因果</div>
+    <div class="tab" data-tab="bestiary" onclick="switchTab('bestiary')">📖 圖鑑</div>
+  </div>
+
+  <!-- BATTLE TAB -->
+  <div class="tab-content active" id="tab-battle">
+    <div id="combat-panel">
+      <div class="combat-header">
+        <div>
+          <div id="zone-label" style="font-weight:700;font-size:15px;color:var(--gold);"></div>
+          <div id="zone-desc" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+        </div>
+        <div id="auto-fight-btn-wrap"></div>
+      </div>
+      <div class="combatants" id="combatants" style="display:none;">
+        <div class="combatant">
+          <div class="combatant-name"><span>🧙 勇者</span> <span id="php-val" style="font-family:'JetBrains Mono',monospace;font-size:11px;"></span></div>
+          <div class="hp-bar"><div class="hp-fill" id="php-bar"></div></div>
+          <div id="player-status" style="font-size:10px;color:var(--muted);margin-top:3px;min-height:14px;"></div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="combatant">
+          <div class="combatant-name"><span id="enemy-name">魔物</span> <span id="ehp-val" style="font-family:'JetBrains Mono',monospace;font-size:11px;"></span></div>
+          <div class="hp-bar"><div class="hp-fill enemy" id="ehp-bar"></div></div>
+          <div id="enemy-status" style="font-size:10px;color:var(--muted);margin-top:3px;min-height:14px;"></div>
+        </div>
+      </div>
+      <div class="clog" id="clog"></div>
+    </div>
+    <div class="section-title">👾 遭遇怪物 <span style="color:var(--muted);font-size:10px;font-weight:400;text-transform:none;">(點擊開戰)</span></div>
+    <div class="mob-grid" id="mob-grid"></div>
+  </div>
+
+  <!-- EQUIP TAB -->
+  <div class="tab-content" id="tab-equip">
+    <div class="stat-alloc-box">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:13px;font-weight:700;">✨ 可分配靈魂點數：<span id="stat-pts" style="color:var(--gold);font-size:18px;font-family:'JetBrains Mono',monospace;"></span></div>
+        <button class="btn btn-dark btn-sm" onclick="resetAllStats()">↩ 重置</button>
+      </div>
+      <div class="stat-row-grid" id="stat-alloc-grid"></div>
+    </div>
+    <div id="stats-formula" class="tooltip-box"></div>
+    <div class="section-title">🔩 穿戴中</div>
+    <div class="equip-slots" id="equip-slots"></div>
+    <div>
+      <div class="sub-tabs">
+        <div class="sub-tab active" id="bag-all" onclick="setBagTab('all')">全部</div>
+        <div class="sub-tab" id="bag-weapon" onclick="setBagTab('weapon')">⚔️武器</div>
+        <div class="sub-tab" id="bag-armor" onclick="setBagTab('armor')">🛡️防具</div>
+        <div class="sub-tab" id="bag-acc" onclick="setBagTab('acc')">💍飾品</div>
+      </div>
+      <div id="inv-header" style="font-size:11px;color:var(--muted);margin-bottom:8px;"></div>
+      <div class="item-grid" id="inventory-grid"></div>
+    </div>
+  </div>
+
+  <!-- SHOP TAB -->
+  <div class="tab-content" id="tab-shop">
+    <div class="section-title">🏪 靈魂交易所</div>
+    <div class="item-grid" id="shop-grid"></div>
+  </div>
+
+  <!-- KARMA TAB -->
+  <div class="tab-content" id="tab-karma">
+    <div class="karma-box">
+      <div style="font-size:13px;font-weight:700;color:var(--cyan);">🌀 因果傳承系統</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">每次轉生後，根據本輪成就永久獲得加成。金幣與裝備完整繼承。</div>
+      <div class="karma-grid" id="karma-grid"></div>
+    </div>
+    <div class="section-title">📊 本輪轉生成就</div>
+    <div id="karma-current" class="tooltip-box"></div>
+  </div>
+
+  <!-- BESTIARY TAB -->
+  <div class="tab-content" id="tab-bestiary">
+    <div class="section-title">📖 魔物圖鑑</div>
+    <div class="bestiary-grid" id="bestiary-grid"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════
+
+const ZONES = [
+  {
+    id:0, name:"落葉原野", icon:"🌿", color:"#00e676",
+    desc:"膨脹起點。建議優先投資 ATK 快速提升傷害。",
+    unlockKarmaAtk:0,
+    mobs:[
+      {id:"slime",   name:"狂暴史萊姆",   icon:"🟢",hp:40,     atk:8,    def:2,    agi:5,  xp:15,      gold:25,      drops:["生鏽鐵劍","破舊布衣"],    dropRare:null},
+      {id:"bat",     name:"偵查夜蝠",     icon:"🦇",hp:90,     atk:20,   def:5,    agi:15, xp:38,      gold:50,      drops:["厚皮背心"],               dropRare:"殘破草帽"},
+      {id:"goblin",  name:"蠻荒哥布林",   icon:"👺",hp:240,    atk:50,   def:12,   agi:10, xp:100,     gold:120,     drops:["短鐵劍"],                  dropRare:"學徒銅戒"},
+      {id:"wolf",    name:"噬血孤狼",     icon:"🐺",hp:800,    atk:130,  def:30,   agi:18, xp:310,     gold:360,     drops:["平衡訓練刃"],              dropRare:"幸運草手環"},
+      {id:"gboss",   name:"草原大領主",   icon:"👑",hp:5000,   atk:500,  def:100,  agi:12, xp:3000,    gold:3000,    drops:["領主碎岩大劍","利刃墜飾"],  dropRare:null, isBoss:true},
+    ]
+  },
+  {
+    id:1, name:"迷霧黑森林", icon:"🌲", color:"#448aff",
+    desc:"數值急升。HP 與 DEF 投資在此至關重要。",
+    unlockKarmaAtk:0,
+    mobs:[
+      {id:"spider",  name:"巨毒奪命蛛",   icon:"🕷️",hp:12000,  atk:1100, def:280,  agi:20, xp:9000,    gold:7000,    drops:["重型破壞劍","皮上衣"],    dropRare:null},
+      {id:"snake",   name:"幻影毒蛇",     icon:"🐍",hp:25000,  atk:2000, def:450,  agi:35, xp:18000,   gold:13000,   drops:["流浪者輕甲"],              dropRare:"殘心符"},
+      {id:"darkelf", name:"影襲暗精靈",   icon:"🧝",hp:65000,  atk:4200, def:900,  agi:50, xp:45000,   gold:28000,   drops:["鋼鐵長劍"],               dropRare:"吸血鬼之牙"},
+      {id:"treeant", name:"遠古巨樹人",   icon:"🌳",hp:180000, atk:7000, def:2200, agi:8,  xp:110000,  gold:62000,   drops:["騎士重鎧"],               dropRare:"精靈不滅之心"},
+      {id:"fboss",   name:"黑森林支配者", icon:"💚",hp:1200000,atk:20000,def:6000, agi:15, xp:900000,  gold:480000,  drops:["精靈不滅之心","火神璽印"],  dropRare:null, isBoss:true},
+    ]
+  },
+  {
+    id:2, name:"炙熱熔岩窟", icon:"🌋", color:"#ff3d5a",
+    desc:"極高防禦壁。需傳說武器或大量 ATK 配點突破。",
+    unlockKarmaAtk:0,
+    mobs:[
+      {id:"golem",   name:"不朽岩漿魔像", icon:"🔥",hp:5000000,   atk:65000,  def:25000, agi:5,  xp:4000000,   gold:1600000, drops:["熔岩破壞斧"],    dropRare:null},
+      {id:"fslime",  name:"烈焰熔融怪",   icon:"🟠",hp:11000000,  atk:110000, def:38000, agi:12, xp:8500000,   gold:3500000, drops:["熔岩重型鎧"],   dropRare:"貪婪黃金袋"},
+      {id:"lizard",  name:"黑曜石巨蜥",   icon:"🦎",hp:28000000,  atk:200000, def:65000, agi:22, xp:20000000,  gold:8000000, drops:["貪婪黃金袋"],    dropRare:null},
+      {id:"dboss",   name:"滅世炎龍王",   icon:"🐉",hp:150000000, atk:950000, def:180000,agi:30, xp:130000000, gold:65000000,drops:["劫火炎龍之牙","火神璽印"], dropRare:null, isBoss:true},
+    ]
+  },
+  {
+    id:3, name:"諸神黃昏神殿", icon:"⛩️", color:"#f0c040",
+    desc:"終焉神域。感受數值突破天際的極致膨脹。",
+    unlockKarmaAtk:0,
+    mobs:[
+      {id:"angel",   name:"墮落秩序天使", icon:"👼",hp:700000000,   atk:5000000,  def:1200000, agi:40,  xp:600000000,   gold:180000000,  drops:["滅世裁決"],         dropRare:null},
+      {id:"valky",   name:"神殿不敗武神", icon:"🛡️",hp:2000000000,  atk:12000000, def:2800000, agi:55,  xp:1500000000,  gold:520000000,  drops:["諸神天衣"],         dropRare:null},
+      {id:"seraph",  name:"熾天使・終焉", icon:"✨",hp:7500000000,  atk:28000000, def:6500000, agi:70,  xp:4500000000,  gold:1400000000, drops:["命運命輪"],         dropRare:null},
+      {id:"godboss", name:"創世審判之神", icon:"⚡",hp:60000000000, atk:140000000,def:28000000,agi:60,  xp:40000000000, gold:12000000000,drops:["創世神之權杖","命運命輪"], dropRare:null, isBoss:true},
+    ]
+  },
+];
+
+const ITEM_DB = {
+  // WEAPONS
+  "生鏽鐵劍":     {slot:"weapon",atkPct:.25,rarity:1,desc:"⚔️ ATK +25%"},
+  "短鐵劍":       {slot:"weapon",atkPct:.60,rarity:1,desc:"⚔️ ATK +60%"},
+  "平衡訓練刃":   {slot:"weapon",atkPct:.50,defPct:.30,rarity:2,desc:"⚖️ ATK+50% / DEF+30%"},
+  "重型破壞劍":   {slot:"weapon",atkPct:1.50,defPct:-.20,rarity:2,desc:"💥 ATK+150% | DEF-20%"},
+  "鋼鐵長劍":     {slot:"weapon",atkPct:2.50,rarity:2,desc:"⚔️ ATK+250%"},
+  "領主碎岩大劍": {slot:"weapon",atkPct:6.00,hpPct:.50,rarity:3,desc:"⛰️ ATK+600% / HP+50%"},
+  "熔岩破壞斧":   {slot:"weapon",atkPct:25.0,rarity:3,desc:"🔥 ATK+2500%"},
+  "劫火炎龍之牙": {slot:"weapon",atkPct:80.0,lifesteal:.15,rarity:4,desc:"🐉 ATK+8000% / 吸血15%"},
+  "滅世裁決":     {slot:"weapon",atkPct:400.0,agiPct:.50,rarity:4,desc:"✨ ATK+40000% / AGI+50%"},
+  "創世神之權杖": {slot:"weapon",atkPct:2500.0,lifesteal:.25,hpPct:10.0,agiPct:1.0,rarity:5,desc:"⚡ ATK+250000% / 吸血25% / HP+1000% / AGI×2"},
+  // ARMORS
+  "破舊布衣":     {slot:"armor",defPct:.20,hpPct:.30,rarity:1,desc:"🛡️ DEF+20% / HP+30%"},
+  "厚皮背心":     {slot:"armor",defPct:.40,hpPct:.15,rarity:1,desc:"🛡️ DEF+40% / HP+15%"},
+  "皮上衣":       {slot:"armor",defPct:.80,hpPct:.50,rarity:2,desc:"🛡️ DEF+80% / HP+50%"},
+  "流浪者輕甲":   {slot:"armor",hpPct:2.00,rarity:2,desc:"❤️ HP+200%"},
+  "騎士重鎧":     {slot:"armor",defPct:3.00,hpPct:2.00,rarity:3,desc:"🛡️ DEF+300% / HP+200%"},
+  "熔岩重型鎧":   {slot:"armor",defPct:15.0,hpPct:10.0,rarity:3,desc:"🌋 DEF+1500% / HP+1000%"},
+  "諸神天衣":     {slot:"armor",defPct:250.0,hpPct:150.0,rarity:5,desc:"✨ DEF+25000% / HP+15000%"},
+  // ACCESSORIES
+  "殘破草帽":     {slot:"acc",hpPct:.20,rarity:1,desc:"👒 HP+20%"},
+  "學徒銅戒":     {slot:"acc",atkPct:.15,defPct:.10,rarity:1,desc:"💍 ATK+15% / DEF+10%"},
+  "幸運草手環":   {slot:"acc",dropRate:.10,rarity:1,desc:"🍀 掉寶率+10%"},
+  "殘心符":       {slot:"acc",dropRate:.25,rarity:2,desc:"🍀 掉寶率+25%"},
+  "利刃墜飾":     {slot:"acc",atkPct:1.00,rarity:2,desc:"🔺 ATK+100%"},
+  "吸血鬼之牙":   {slot:"acc",lifesteal:.20,rarity:2,desc:"🩸 吸血20%"},
+  "貪婪黃金袋":   {slot:"acc",goldBonus:1.50,rarity:3,desc:"💰 金幣+150%"},
+  "精靈不滅之心": {slot:"acc",lifesteal:.15,hpPct:5.00,rarity:3,desc:"🌲 吸血15% / HP+500%"},
+  "火神璽印":     {slot:"acc",atkPct:10.0,defPct:10.0,rarity:3,desc:"🔥 ATK+1000% / DEF+1000%"},
+  "命運命輪":     {slot:"acc",dropRate:.60,atkPct:50.0,agiPct:.80,rarity:5,desc:"🌌 掉寶+60% / ATK+5000% / AGI+80%"},
+};
+
+const SHOP_ITEMS = [
+  {name:"生鏽鐵劍",price:60},{name:"破舊布衣",price:50},{name:"厚皮背心",price:120},
+  {name:"殘破草帽",price:40},{name:"幸運草手環",price:250},{name:"短鐵劍",price:600},
+  {name:"平衡訓練刃",price:1500},{name:"皮上衣",price:2200},{name:"流浪者輕甲",price:4500},
+  {name:"殘心符",price:8000},{name:"利刃墜飾",price:15000},{name:"吸血鬼之牙",price:35000},
+];
+
+const XP_TABLE = Array.from({length:200},(_,i)=>Math.floor(60*Math.pow(1.28,i)));
+
+// ═══════════════════════════════════════════════════
+//  PLAYER STATE
+// ═══════════════════════════════════════════════════
+let player = {
+  level:1,xp:0,gold:0,hp:0,
+  baseHp:120,baseAtk:15,baseDef:5,baseAgi:10,
+  challenges:40,maxChallenges:40,
+  equipment:{weapon:null,armor:null,acc:null},
+  inventory:[],
+  unlockedZone:0,
+  discovered:{},defeatedBosses:{},
+  statPoints:0,
+  statsAlloc:{hp:0,atk:0,def:0,agi:0,luk:0},
+  // karma = permanent bonuses across rebirths
+  karma:{rebirths:0,totalLevels:0,totalBossKills:0,atkBonus:0,hpBonus:0,defBonus:0,dropBonus:0,goldBonus:0,extraChallenges:0},
+  thisRunBossKills:0,
+  thisRunMaxLevel:0,
+  thisRunZoneReached:0,
+};
+
+let selectedZone=0, fightRunning=false, currentBagTab="all", autoFight=false, autoFightTimer=null;
+
+// ═══════════════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════════════
+function save(){try{localStorage.setItem("irpg_v2",JSON.stringify(player));}catch(e){}}
+function load(){
+  try{
+    const s=localStorage.getItem("irpg_v2");
+    if(s){
+      const p=JSON.parse(s);
+      if(p.inventory&&Array.isArray(p.inventory)){Object.assign(player,p);}
+    }
+  }catch(e){}
+  if(!player.karma)player.karma={rebirths:0,totalLevels:0,totalBossKills:0,atkBonus:0,hpBonus:0,defBonus:0,dropBonus:0,goldBonus:0,extraChallenges:0};
+  if(!player.statsAlloc.agi)player.statsAlloc.agi=0;
+  if(!player.statsAlloc.luk)player.statsAlloc.luk=0;
+  if(!player.defeatedBosses)player.defeatedBosses={};
+  if(!player.discovered)player.discovered={};
+  player.hp=getStats().hp;
+}
+
+// ═══════════════════════════════════════════════════
+//  STATS ENGINE
+// ═══════════════════════════════════════════════════
+function getStats(){
+  // Base from level + allocation
+  const lv=player.level-1;
+  let rawHp =player.baseHp  + lv*40  + player.statsAlloc.hp *130 + player.karma.hpBonus*50;
+  let rawAtk=player.baseAtk + lv*7   + player.statsAlloc.atk*35  + player.karma.atkBonus*15;
+  let rawDef=player.baseDef + lv*3.5 + player.statsAlloc.def*14  + player.karma.defBonus*6;
+  let rawAgi=player.baseAgi + lv*1.5 + player.statsAlloc.agi*8;
+
+  let hpPct=0,atkPct=0,defPct=0,agiPct=0,lifesteal=0,dropRate=0,goldBonus=0;
+  for(const slot of["weapon","armor","acc"]){
+    const name=player.equipment[slot];
+    if(name&&ITEM_DB[name]){
+      const it=ITEM_DB[name];
+      hpPct  +=(it.hpPct   ||0);
+      atkPct +=(it.atkPct  ||0);
+      defPct +=(it.defPct  ||0);
+      agiPct +=(it.agiPct  ||0);
+      lifesteal+=(it.lifesteal||0);
+      dropRate +=(it.dropRate ||0);
+      goldBonus+=(it.goldBonus||0);
+    }
+  }
+
+  // LUK bonus effects
+  const lukDrop   = player.statsAlloc.luk * 0.012;
+  const lukGold   = player.statsAlloc.luk * 0.008;
+  const lukCrit   = Math.min(0.60, player.statsAlloc.luk * 0.003);
+
+  // AGI effects: crit chance & dodge
+  const finalAgi  = rawAgi*(1+agiPct);
+  const critChance= Math.min(0.75, finalAgi*0.0025 + lukCrit);
+  const critDmg   = 1.5 + Math.min(2.0, finalAgi*0.002);
+  const comboChance=Math.min(0.50, finalAgi*0.0012);
+  const dodgeChance=Math.min(0.30, finalAgi*0.0008);
+
+  return {
+    hp:   Math.floor(rawHp*(1+hpPct)),
+    atk:  Math.floor(rawAtk*(1+atkPct)),
+    def:  Math.floor(rawDef*(1+defPct)),
+    agi:  Math.floor(finalAgi),
+    critChance, critDmg, comboChance, dodgeChance,
+    lifesteal: Math.min(0.80, lifesteal),
+    dropRate:  Math.min(2.0, dropRate+lukDrop + player.karma.dropBonus*0.05),
+    goldBonus: goldBonus+lukGold + player.karma.goldBonus*0.05,
+    rawHp,rawAtk,rawDef,rawAgi,
+    hpPct,atkPct,defPct,agiPct,
+  };
+}
+
+function xpForNext(){return XP_TABLE[Math.min(player.level-1,XP_TABLE.length-1)];}
+function gainXP(amount){
+  player.xp+=amount;
+  let leveled=false;
+  while(player.xp>=xpForNext()&&player.level<9999){
+    player.xp-=xpForNext();
+    player.level++;
+    player.statPoints+=10;
+    if(player.level%5===0)player.statPoints+=5; // bonus every 5 levels
+    leveled=true;
+  }
+  if(player.level>player.thisRunMaxLevel)player.thisRunMaxLevel=player.level;
+  return leveled;
+}
+
+// ═══════════════════════════════════════════════════
+//  REBIRTH / KARMA
+// ═══════════════════════════════════════════════════
+function doRebirth(){
+  // Calculate karma gains from this run
+  const levGain  = Math.floor(player.thisRunMaxLevel/20);
+  const bossGain = player.thisRunBossKills;
+  const zoneGain = player.thisRunZoneReached;
+
+  player.karma.rebirths++;
+  player.karma.totalLevels+=player.thisRunMaxLevel;
+  player.karma.totalBossKills+=bossGain;
+
+  // Award karma stats
+  const atkGain  = levGain + zoneGain*2 + bossGain*3;
+  const hpGain   = levGain + zoneGain;
+  const defGain  = levGain;
+  const dropGain = bossGain;
+  const goldGain = zoneGain;
+  const chalGain = Math.floor(bossGain/3);
+
+  player.karma.atkBonus  +=atkGain;
+  player.karma.hpBonus   +=hpGain;
+  player.karma.defBonus  +=defGain;
+  player.karma.dropBonus +=dropGain;
+  player.karma.goldBonus +=goldGain;
+  player.karma.extraChallenges+=chalGain;
+
+  const bonusChal=Math.min(40,player.karma.extraChallenges);
+  const newMaxChal=40+bonusChal;
+
+  // Reset run stats (keep gold, inventory, karma)
+  player.level=1;player.xp=0;
+  player.challenges=newMaxChal;player.maxChallenges=newMaxChal;
+  player.statPoints=0;
+  player.statsAlloc={hp:0,atk:0,def:0,agi:0,luk:0};
+  player.defeatedBosses={};
+  player.unlockedZone=0;
+  player.thisRunBossKills=0;player.thisRunMaxLevel=1;player.thisRunZoneReached=0;
+  selectedZone=0;
+  player.hp=getStats().hp;
+  save();
+
+  const msg=`🌀 因果轉生！\n\n本輪成就：Lv.${player.thisRunMaxLevel>1?player.thisRunMaxLevel:1} / Boss擊殺 ${bossGain} 隻\n\n永久因果加成獲得：\n⚔ ATK傳承 +${atkGain}\n❤ HP傳承 +${hpGain}\n🛡 DEF傳承 +${defGain}\n\n金幣與裝備完整繼承！`;
+  render();
+  alert(msg);
+  switchTab('karma');
+}
+
+function checkRebirth(){
+  if(player.challenges<=0){
+    stopAuto();
+    doRebirth();
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════
+//  COMBAT ENGINE
+// ═══════════════════════════════════════════════════
+let _combatEl={};
+function getCombatEls(){
+  _combatEl={
+    combatants:document.getElementById("combatants"),
+    enemyName:document.getElementById("enemy-name"),
+    phpVal:document.getElementById("php-val"),
+    ehpVal:document.getElementById("ehp-val"),
+    phpBar:document.getElementById("php-bar"),
+    ehpBar:document.getElementById("ehp-bar"),
+    clog:document.getElementById("clog"),
+    pStatus:document.getElementById("player-status"),
+    eStatus:document.getElementById("enemy-status"),
+  };
+}
+
+function addLog(html,cls=""){
+  const el=_combatEl.clog;if(!el)return;
+  const d=document.createElement("div");
+  d.innerHTML=cls?`<span class="${cls}">${html}</span>`:html;
+  el.insertBefore(d,el.firstChild);
+}
+function clearLog(){if(_combatEl.clog)_combatEl.clog.innerHTML="";}
+function updateBars(myHp,myMax,enHp,enMax){
+  _combatEl.phpVal.textContent=`${fmt(myHp)}/${fmt(myMax)}`;
+  _combatEl.ehpVal.textContent=`${fmt(enHp)}/${fmt(enMax)}`;
+  _combatEl.phpBar.style.width=(myMax>0?Math.max(0,myHp/myMax*100):0)+"%";
+  _combatEl.ehpBar.style.width=(enMax>0?Math.max(0,enHp/enMax*100):0)+"%";
+}
+
+async function fightMob(mob){
+  if(fightRunning)return;
+  if(mob.isBoss&&player.defeatedBosses[mob.id]){
+    addLog(`❌ ${mob.name} 已被擊倒，等待下次轉生！`,"log-lose");return;
+  }
+  if(player.challenges<=0){checkRebirth();return;}
+  if(selectedZone>player.unlockedZone)return;
+
+  fightRunning=true;
+  getCombatEls();
+  switchTab('battle');
+
+  const s=getStats();
+  let myHp=s.hp,enHp=mob.hp,myMax=s.hp,enMax=mob.hp;
+  _combatEl.combatants.style.display="grid";
+  _combatEl.enemyName.textContent=mob.icon+" "+mob.name;
+  _combatEl.pStatus.textContent="";
+  _combatEl.eStatus.textContent="";
+  updateBars(myHp,myMax,enHp,enMax);
+  clearLog();
+  addLog(`⚔️ 迎戰：<b>${mob.name}</b>`,"");
+
+  let round=0,won=false;
+  while(myHp>0&&enHp>0&&round<200){
+    round++;
+    await sleep(35);
+
+    // ── PLAYER ATTACK ──
+    const baseDmg=Math.max(1,s.atk-mob.def);
+    const isCrit=Math.random()<s.critChance;
+    const isCombo=Math.random()<s.comboChance;
+    let pDmg=Math.floor(baseDmg*(isCrit?s.critDmg:1));
+    enHp=Math.max(0,enHp-pDmg);
+
+    let atkLog=isCrit
+      ?`<span class="log-crit">💥 暴擊！造成 ${fmt(pDmg)} 傷害</span>`
+      :`<span class="log-hit">🗡️ 攻擊造成 ${fmt(pDmg)} 傷害</span>`;
+
+    // Lifesteal
+    if(s.lifesteal>0){
+      const heal=Math.floor(pDmg*s.lifesteal);
+      if(heal>0){myHp=Math.min(myMax,myHp+heal);atkLog+=`<span class="log-heal"> ＋${fmt(heal)}🩸</span>`;}
+    }
+    addLog(atkLog);
+
+    // Combo: extra hit
+    if(isCombo&&enHp>0){
+      await sleep(20);
+      const cDmg=Math.floor(baseDmg*0.6);
+      enHp=Math.max(0,enHp-cDmg);
+      addLog(`<span class="log-combo">⚡ 連擊！額外 ${fmt(cDmg)} 傷害</span>`);
+    }
+
+    updateBars(myHp,myMax,enHp,enMax);
+    if(enHp<=0){won=true;break;}
+
+    await sleep(25);
+
+    // ── ENEMY ATTACK ──
+    const isDodge=Math.random()<s.dodgeChance;
+    if(isDodge){
+      addLog(`<span class="log-combo">🌀 閃避！躲過敵方攻擊</span>`);
+    }else{
+      const eDmg=Math.max(1,mob.atk-s.def);
+      myHp=Math.max(0,myHp-eDmg);
+      addLog(`<span class="log-mob">💢 ${mob.name} 攻擊，你受到 ${fmt(eDmg)} 傷害</span>`);
+    }
+    updateBars(myHp,myMax,enHp,enMax);
+    if(myHp<=0)break;
+  }
+
+  player.challenges--;
+
+  if(won){
+    const gMult=1+getStats().goldBonus;
+    const finalGold=Math.floor(mob.gold*gMult);
+    player.gold+=finalGold;
+    player.discovered[mob.id]=true;
+    addLog(`<span class="log-win">✅ 勝利！+${mob.xp.toLocaleString()} XP / +${fmt(finalGold)} 💰</span>`);
+
+    if(gainXP(mob.xp)){
+      addLog(`<span class="log-level">⬆️ 等級突破！Lv.${player.level}（獲得點數待分配）</span>`);
+    }
+
+    // Drop system
+    const baseDropChance=(mob.isBoss?0.50:0.10)+getStats().dropRate;
+    if(Math.random()<Math.min(0.95,baseDropChance)){
+      const pool=[];
+      if(mob.drops&&mob.drops.length){pool.push(...mob.drops.map(d=>({name:d,w:mob.isBoss?3:2})));}
+      if(mob.dropRare){pool.push({name:mob.dropRare,w:1});}
+      if(pool.length){
+        const total=pool.reduce((s,x)=>s+x.w,0);
+        let r=Math.random()*total;
+        for(const x of pool){r-=x.w;if(r<=0){const already=player.inventory.includes(x.name);if(!already){player.inventory.push(x.name);addLog(`<span class="log-drop">💎 獲得裝備：【${x.name}】</span>`);}break;}}
+      }
+    }
+
+    if(mob.isBoss){
+      player.defeatedBosses[mob.id]=true;
+      player.thisRunBossKills++;
+      if(player.unlockedZone<=selectedZone&&selectedZone+1<ZONES.length){
+        player.unlockedZone=selectedZone+1;
+        addLog(`<span class="log-level">🔓 新區域解鎖：【${ZONES[selectedZone+1].name}】</span>`);
+      }
+      if(selectedZone>player.thisRunZoneReached)player.thisRunZoneReached=selectedZone;
+    }
+  }else{
+    addLog(`<span class="log-lose">💀 敗北！剩餘挑戰：${player.challenges} 次</span>`);
+  }
+
+  player.hp=getStats().hp;
+  save();
+  fightRunning=false;
+  if(!checkRebirth())render();
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ═══════════════════════════════════════════════════
+//  AUTO FIGHT
+// ═══════════════════════════════════════════════════
+let autoTargetMob=null;
+function toggleAuto(mob){
+  if(autoFight&&autoTargetMob===mob){stopAuto();return;}
+  autoFight=true;autoTargetMob=mob;
+  renderAutoBtn();
+  runAuto();
+}
+function stopAuto(){
+  autoFight=false;autoTargetMob=null;
+  if(autoFightTimer){clearTimeout(autoFightTimer);autoFightTimer=null;}
+  renderAutoBtn();
+}
+async function runAuto(){
+  if(!autoFight||!autoTargetMob)return;
+  if(fightRunning){autoFightTimer=setTimeout(runAuto,200);return;}
+  if(player.challenges<=0){stopAuto();return;}
+  if(autoTargetMob.isBoss&&player.defeatedBosses[autoTargetMob.id]){stopAuto();return;}
+  await fightMob(autoTargetMob);
+  if(autoFight)autoFightTimer=setTimeout(runAuto,300);
+}
+function renderAutoBtn(){
+  const el=document.getElementById("auto-fight-btn-wrap");if(!el)return;
+  if(autoFight&&autoTargetMob){
+    el.innerHTML=`<button class="btn btn-red btn-sm" onclick="stopAuto()">⏹ 停止 AUTO（${autoTargetMob.name}）</button>`;
+  }else{
+    el.innerHTML=`<span style="font-size:11px;color:var(--muted);">在怪物卡右上角可啟用 AUTO</span>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  STATS ALLOCATION
+// ═══════════════════════════════════════════════════
+function allocateStat(type,count){
+  if(player.statPoints<=0)return;
+  if(count==='all')count=player.statPoints;
+  count=Math.min(count,player.statPoints);
+  player.statPoints-=count;
+  player.statsAlloc[type]+=count;
+  player.hp=getStats().hp;
+  save();renderEquip();renderSidebar();
+}
+function resetAllStats(){
+  if(!confirm("重置本輪所有點數分配？"))return;
+  const total=Object.values(player.statsAlloc).reduce((a,b)=>a+b,0);
+  player.statPoints+=total;
+  player.statsAlloc={hp:0,atk:0,def:0,agi:0,luk:0};
+  player.hp=getStats().hp;
+  save();renderEquip();
+}
+
+// ═══════════════════════════════════════════════════
+//  EQUIPMENT
+// ═══════════════════════════════════════════════════
+function equip(idx){
+  const name=player.inventory[idx];if(!ITEM_DB[name])return;
+  const it=ITEM_DB[name];
+  const old=player.equipment[it.slot];
+  player.equipment[it.slot]=name;
+  player.inventory.splice(idx,1);
+  if(old)player.inventory.push(old);
+  save();renderEquip();
+}
+function unequip(slot){
+  const name=player.equipment[slot];if(!name)return;
+  player.equipment[slot]=null;
+  player.inventory.push(name);
+  save();renderEquip();
+}
+function buyItem(name,price){
+  const inEq=Object.values(player.equipment).includes(name);
+  const inInv=player.inventory.includes(name);
+  if(inEq||inInv){alert("你已擁有此物品！");return;}
+  if(player.gold<price){alert("金幣不足！");return;}
+  player.gold-=price;player.inventory.push(name);
+  save();renderShop();renderSidebar();
+}
+function resetAll(){
+  if(!confirm("完全重置所有存檔？此操作無法恢復！"))return;
+  localStorage.removeItem("irpg_v2");location.reload();
+}
+
+// ═══════════════════════════════════════════════════
+//  FORMAT
+// ═══════════════════════════════════════════════════
+function fmt(n){
+  n=Math.floor(n);
+  if(n>=1e12)return(n/1e12).toFixed(1)+"T";
+  if(n>=1e9) return(n/1e9).toFixed(1) +"B";
+  if(n>=1e6) return(n/1e6).toFixed(1) +"M";
+  if(n>=1e3) return(n/1e3).toFixed(1) +"K";
+  return n.toLocaleString();
+}
+function pct(v){return Math.round(v*100)+"%";}
+
+// ═══════════════════════════════════════════════════
+//  RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════
+function render(){
+  renderSidebar();renderTopbar();
+  renderZones();renderMobGrid();
+  renderAutoBtn();
+  const activeTab=document.querySelector(".tab.active");
+  if(activeTab){
+    const t=activeTab.dataset.tab;
+    if(t==="equip")renderEquip();
+    if(t==="shop")renderShop();
+    if(t==="karma")renderKarma();
+    if(t==="bestiary")renderBestiary();
+  }
+}
+
+function renderTopbar(){
+  const s=getStats();
+  const ptsBadge=player.statPoints>0?`<span class="tab-badge">${player.statPoints}</span>`:"";
+  document.getElementById("tab-equip-btn").innerHTML=`🎒 裝備${ptsBadge}`;
+  document.getElementById("topstats").innerHTML=`
+    <div class="chip">👤 <b>Lv.${player.level}</b></div>
+    <div class="chip">❤️ <b>${fmt(s.hp)}</b></div>
+    <div class="chip">⚔️ <b>${fmt(s.atk)}</b></div>
+    <div class="chip">🛡️ <b>${fmt(s.def)}</b></div>
+    <div class="chip">💨 <b>${fmt(s.agi)}</b></div>
+    <div class="chip">💰 <b style="color:var(--gold);">${fmt(player.gold)}</b></div>
+    ${player.karma.rebirths>0?`<div class="chip">🌀 <b style="color:var(--cyan);">轉${player.karma.rebirths}</b></div>`:""}
+  `;
+}
+
+function renderSidebar(){
+  const s=getStats();
+  // Challenges
+  const chalPct=player.challenges/player.maxChallenges*100;
+  document.getElementById("challenges-display").textContent=player.challenges;
+  document.getElementById("challenge-bar").style.width=chalPct+"%";
+  // XP
+  const xpMax=xpForNext();
+  document.getElementById("xp-display").textContent=`${fmt(player.xp)} / ${fmt(xpMax)} XP`;
+  document.getElementById("xp-bar").style.width=Math.min(100,player.xp/xpMax*100)+"%";
+  // Rebirth info
+  document.getElementById("rebirth-info").innerHTML=`
+    <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+      🔄 轉生次數：<b style="color:var(--cyan);">${player.karma.rebirths}</b><br>
+      Lv.上限：<b>${player.thisRunMaxLevel||player.level}</b> / Boss：<b>${player.thisRunBossKills}</b><br>
+      <span style="color:var(--red2);font-size:10px;">次數歸0時自動轉生</span>
+    </div>
+  `;
+}
+
+function renderZones(){
+  const el=document.getElementById("zone-list");el.innerHTML="";
+  ZONES.forEach((z,i)=>{
+    const locked=i>player.unlockedZone;
+    const active=selectedZone===i&&!locked;
+    const div=document.createElement("div");
+    div.className="zone-card"+(locked?" locked":"")+(active?" active":"");
+    const allBossDead=z.mobs.filter(m=>m.isBoss).every(m=>player.defeatedBosses[m.id]);
+    div.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="zone-name" style="color:${locked?"#444":z.color}">${z.icon} ${z.name}</div>
+        ${allBossDead?`<span style="font-size:10px;color:var(--green);">✓完</span>`:""}
+      </div>
+      ${locked?`<div class="zone-lvreq">🔒 擊敗上區BOSS解鎖</div>`:""}
+    `;
+    if(!locked)div.onclick=()=>{selectedZone=i;renderZones();renderMobGrid();};
+    el.appendChild(div);
+  });
+}
+
+function renderMobGrid(){
+  const z=ZONES[selectedZone];
+  const locked=selectedZone>player.unlockedZone;
+  document.getElementById("zone-label").textContent=z.icon+" "+z.name;
+  document.getElementById("zone-desc").textContent=z.desc;
+  const grid=document.getElementById("mob-grid");grid.innerHTML="";
+  if(locked){grid.innerHTML=`<div style="color:var(--muted);padding:20px;text-align:center;">🔒 請先擊敗上一區域的BOSS</div>`;return;}
+  const s=getStats();
+  z.mobs.forEach(mob=>{
+    const dead=mob.isBoss&&player.defeatedBosses[mob.id];
+    const card=document.createElement("div");
+    card.className="mob-card"+(mob.isBoss?" is-boss":"")+(dead?" mob-dead":"");
+    if(dead){
+      card.innerHTML=`<div style="text-align:center;color:var(--muted);padding:10px;">👑 ${mob.name}<br><small>[本輪已滅]</small></div>`;
+    }else{
+      const canWin=s.atk-mob.def>0||(s.atk>mob.hp/200);
+      const dropPct=Math.round(Math.min(95,(mob.isBoss?50:10)+s.dropRate*100));
+      card.innerHTML=`
+        <div class="mob-title">
+          <span style="color:${mob.isBoss?"var(--gold)":"var(--text)"}">${mob.icon} ${mob.name}</span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            ${mob.isBoss?`<span class="boss-badge">BOSS</span>`:""}
+            <button class="btn btn-sm ${autoFight&&autoTargetMob===mob?"btn-red":"btn-dark"}" onclick="event.stopPropagation();toggleAuto(${JSON.stringify(mob).replace(/"/g,"'")} )">
+              ${autoFight&&autoTargetMob===mob?"⏹":"▶"}
+            </button>
+          </div>
+        </div>
+        <div class="mob-stats">
+          <div>❤️ ${fmt(mob.hp)}</div>
+          <div>⚔️ ${fmt(mob.atk)}</div>
+          <div>🛡️ ${fmt(mob.def)}</div>
+          <div>💨 AGI ${mob.agi}</div>
+          <div>💰 ${fmt(mob.gold)}</div>
+          <div>✨ ${mob.xp.toLocaleString()} XP</div>
+        </div>
+        <div class="mob-drops">🎁 ${[...mob.drops,...(mob.dropRare?[mob.dropRare+"（稀有）"]:[])].join(" / ")} <span style="color:var(--muted);">(${dropPct}%)</span></div>
+      `;
+      // Pass mob data properly via closure
+      const mobData=mob;
+      card.onclick=()=>fightMob(mobData);
+    }
+    grid.appendChild(card);
+  });
+}
+
+function renderEquip(){
+  const s=getStats();
+  // Stat points
+  document.getElementById("stat-pts").textContent=player.statPoints;
+  // Alloc grid
+  const statDefs=[
+    {k:"hp",  label:"❤️ 生命 (HP)",  color:"var(--red)",    per:"每點+130基礎HP"},
+    {k:"atk", label:"⚔️ 攻擊 (ATK)", color:"var(--blue)",   per:"每點+35基礎ATK"},
+    {k:"def", label:"🛡️ 防禦 (DEF)", color:"var(--green2)", per:"每點+14基礎DEF"},
+    {k:"agi", label:"💨 敏捷 (AGI)", color:"var(--cyan)",   per:"每點+8 AGI (暴擊/連擊/閃避)"},
+    {k:"luk", label:"🍀 幸運 (LUK)", color:"var(--gold)",   per:"每點+1.2%掉寶/0.8%金幣/0.3%暴擊"},
+  ];
+  document.getElementById("stat-alloc-grid").innerHTML=statDefs.map(({k,label,color,per})=>`
+    <div class="stat-row-item">
+      <div class="stat-row-left">
+        <div>${label}</div>
+        <div style="color:${color};margin-top:1px;font-weight:700;font-size:13px;">${player.statsAlloc[k]} 點</div>
+        <div style="font-size:10px;color:var(--muted);">${per}</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-gold btn-xs" ${player.statPoints<=0?"disabled":""} onclick="allocateStat('${k}',1)">+1</button>
+        <button class="btn btn-gold btn-xs" ${player.statPoints<10?"disabled":""} onclick="allocateStat('${k}',10)">+10</button>
+        <button class="btn btn-gold btn-xs" ${player.statPoints<50?"disabled":""} onclick="allocateStat('${k}',50)">+50</button>
+        <button class="btn btn-blue btn-xs" ${player.statPoints<=0?"disabled":""} onclick="allocateStat('${k}','all')">全</button>
+      </div>
+    </div>`).join("");
+
+  // Stats formula
+  document.getElementById("stats-formula").innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;line-height:1.7;">
+      <div>❤️ HP: <b>${fmt(s.rawHp)}</b> × (1+${pct(s.hpPct)}) = <b style="color:var(--red);">${fmt(s.hp)}</b></div>
+      <div>⚔️ ATK: <b>${fmt(s.rawAtk)}</b> × (1+${pct(s.atkPct)}) = <b style="color:var(--blue);">${fmt(s.atk)}</b></div>
+      <div>🛡️ DEF: <b>${fmt(s.rawDef)}</b> × (1+${pct(s.defPct)}) = <b style="color:var(--green2);">${fmt(s.def)}</b></div>
+      <div>💨 AGI: <b>${fmt(s.rawAgi)}</b> → <b style="color:var(--cyan);">${fmt(s.agi)}</b></div>
+      <div>💥 暴擊率: <b style="color:var(--crit);">${pct(s.critChance)}</b> (倍率×${s.critDmg.toFixed(2)})</div>
+      <div>⚡ 連擊率: <b style="color:var(--combo);">${pct(s.comboChance)}</b></div>
+      <div>🌀 閃避率: <b style="color:var(--purple);">${pct(s.dodgeChance)}</b></div>
+      <div>🩸 吸血: <b style="color:var(--lifesteal);">${pct(s.lifesteal)}</b></div>
+      <div>🍀 掉寶: <b style="color:var(--gold);">+${pct(s.dropRate)}</b></div>
+      <div>💰 金幣: <b style="color:var(--gold);">×${(1+s.goldBonus).toFixed(2)}</b></div>
+    </div>`;
+
+  // Equip slots
+  const slotDefs=[{k:"weapon",label:"⚔️ 武器"},{k:"armor",label:"🛡️ 防具"},{k:"acc",label:"💍 飾品"}];
+  document.getElementById("equip-slots").innerHTML=slotDefs.map(({k,label})=>{
+    const name=player.equipment[k];
+    const it=name?ITEM_DB[name]:null;
+    return `<div class="equip-slot">
+      <div class="equip-label">${label}</div>
+      ${it?`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+        <div>
+          <div class="equip-content" style="color:var(--text);">${name}</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px;">${it.desc}</div>
+        </div>
+        <button class="btn btn-dark btn-xs" onclick="unequip('${k}')">卸</button>
+      </div>`
+      :`<div style="color:var(--muted);font-size:12px;">（空）</div>`}
+    </div>`;
+  }).join("");
+
+  // Inventory
+  let displayItems=player.inventory.map((name,i)=>({name,i})).filter(({name})=>{
+    const it=ITEM_DB[name];
+    return it&&(currentBagTab==="all"||it.slot===currentBagTab);
+  });
+  document.getElementById("inv-header").textContent=`顯示 ${displayItems.length} / 總計 ${player.inventory.length} 件`;
+  const invGrid=document.getElementById("inventory-grid");invGrid.innerHTML="";
+  displayItems.forEach(({name,i})=>{
+    const it=ITEM_DB[name];
+    const card=document.createElement("div");
+    card.className=`item-card r${it.rarity}`;
+    card.innerHTML=`
+      <div class="item-name" style="color:var(--text);">${name}</div>
+      <div class="item-desc">${it.desc}</div>
+      <div style="font-size:10px;color:var(--muted);">部位：${it.slot==="weapon"?"⚔️武器":it.slot==="armor"?"🛡️防具":"💍飾品"}</div>
+      <button class="btn btn-gold btn-sm" style="width:100%;margin-top:4px;" onclick="equip(${i})">穿戴</button>
+    `;
+    invGrid.appendChild(card);
+  });
+}
+
+function renderShop(){
+  const grid=document.getElementById("shop-grid");grid.innerHTML="";
+  SHOP_ITEMS.forEach(({name,price})=>{
+    const it=ITEM_DB[name];if(!it)return;
+    const owned=Object.values(player.equipment).includes(name)||player.inventory.includes(name);
+    const card=document.createElement("div");
+    card.className=`item-card r${it.rarity}`;
+    card.innerHTML=`
+      <div class="item-name" style="color:var(--text);">${name}</div>
+      <div class="item-desc">${it.desc}</div>
+      <button class="btn btn-gold btn-sm" style="width:100%;margin-top:4px;" ${owned||player.gold<price?"disabled":""} onclick="buyItem('${name}',${price})">
+        ${owned?"✓ 已擁有":`💰 ${fmt(price)}`}
+      </button>`;
+    grid.appendChild(card);
+  });
+}
+
+function renderKarma(){
+  const k=player.karma;
+  const karmaItems=[
+    {label:"ATK 傳承",    val:k.atkBonus,  desc:"每點+15基礎ATK（跨轉生）",  color:"var(--blue)"},
+    {label:"HP 傳承",     val:k.hpBonus,   desc:"每點+50基礎HP（跨轉生）",   color:"var(--red)"},
+    {label:"DEF 傳承",    val:k.defBonus,  desc:"每點+6基礎DEF（跨轉生）",   color:"var(--green2)"},
+    {label:"掉寶 傳承",   val:k.dropBonus, desc:"每點+5%掉寶率",              color:"var(--gold)"},
+    {label:"金幣 傳承",   val:k.goldBonus, desc:"每點+5%金幣獲取",            color:"var(--orange)"},
+    {label:"額外次數",    val:k.extraChallenges,desc:"獲得更多挑戰機會",      color:"var(--cyan)"},
+  ];
+  document.getElementById("karma-grid").innerHTML=karmaItems.map(({label,val,desc,color})=>`
+    <div class="karma-item">
+      <div class="karma-name">${label}</div>
+      <div class="karma-value" style="color:${color};">${val}</div>
+      <div class="karma-desc">${desc}</div>
+    </div>`).join("");
+
+  document.getElementById("karma-current").innerHTML=`
+    <div style="font-size:12px;line-height:1.9;color:var(--muted);">
+      🔄 總轉生次數：<b style="color:var(--cyan);">${k.rebirths}</b><br>
+      📈 本輪最高等級：<b style="color:var(--purple);">${player.thisRunMaxLevel||player.level}</b><br>
+      👹 本輪擊殺BOSS：<b style="color:var(--orange);">${player.thisRunBossKills}</b><br>
+      🗺️ 本輪最遠區域：<b style="color:var(--blue);">${ZONES[player.thisRunZoneReached]?.name||ZONES[0].name}</b><br>
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--text2);">
+        次數歸0時自動轉生。建議達到 Lv.50+ 再讓次數耗盡，以獲得更多因果加成。
+      </div>
+    </div>`;
+}
+
+function renderBestiary(){
+  const grid=document.getElementById("bestiary-grid");grid.innerHTML="";
+  ZONES.forEach(z=>{
+    z.mobs.forEach(mob=>{
+      const known=player.discovered[mob.id];
+      const card=document.createElement("div");
+      card.className="bestiary-card";
+      card.style.borderColor=known?"var(--border)":"#1a1a2e";
+      if(known){
+        card.innerHTML=`
+          <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:6px;">${mob.icon} ${mob.name} ${mob.isBoss?'<span class="boss-badge">BOSS</span>':''}</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+            ❤️ HP: ${fmt(mob.hp)}<br>
+            ⚔️ ATK: ${fmt(mob.atk)}<br>
+            🛡️ DEF: ${fmt(mob.def)}<br>
+            💨 AGI: ${mob.agi}
+          </div>
+          <div style="font-size:11px;color:var(--gold);border-top:1px dashed var(--border);margin-top:6px;padding-top:5px;">
+            🎁 ${[...mob.drops,...(mob.dropRare?[mob.dropRare+"★"]:[])] .join(" / ")}
+          </div>`;
+      }else{
+        card.innerHTML=`<div style="text-align:center;padding:16px 0;color:#333;font-size:12px;">❓ 未知生物<br><small>擊殺後解鎖</small></div>`;
+        card.style.opacity=".4";
+      }
+      grid.appendChild(card);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════
+function switchTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.tab===name));
+  document.querySelectorAll(".tab-content").forEach(t=>t.classList.toggle("active",t.id==="tab-"+name));
+  if(name==="equip")renderEquip();
+  if(name==="shop")renderShop();
+  if(name==="karma")renderKarma();
+  if(name==="bestiary")renderBestiary();
+}
+function setBagTab(t){
+  currentBagTab=t;
+  document.querySelectorAll(".sub-tab").forEach(s=>s.classList.toggle("active",s.id==="bag-"+t));
+  renderEquip();
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+load();
+render();
+getCombatEls();
+</script>
+</body>
+</html>
